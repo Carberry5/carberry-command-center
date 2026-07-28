@@ -774,6 +774,9 @@ export async function pushChanges(
 // Realtime — replaces the vault watcher
 // ---------------------------------------------------------------------------
 
+/** Makes each subscription's channel topic unique. See subscribe(). */
+let channelSeq = 0
+
 /**
  * Watches every household table and calls `onChange` after things settle.
  *
@@ -819,7 +822,13 @@ export function subscribe(
     if (data.session?.access_token) await sb.realtime.setAuth(data.session.access_token)
     if (closed) return
 
-    let ch = sb.channel(`household:${householdId}`)
+    // supabase-js caches channels by topic and returns the existing one for a
+    // repeated name — so a second subscribe() for the same household gets back
+    // an already-subscribed channel and throws on .on(). A per-call topic
+    // avoids that entirely. It also drops the colon the old name carried;
+    // supabase-js already prefixes topics with "realtime:", and a second
+    // separator is not worth risking in the server's topic routing.
+    let ch = sb.channel(`household-${householdId}-${++channelSeq}`)
     for (const table of WRITE_ORDER) {
       ch = ch.on(
         'postgres_changes',

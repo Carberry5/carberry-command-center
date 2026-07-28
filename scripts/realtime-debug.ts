@@ -141,10 +141,12 @@ async function main() {
       () => void hits['plain name, 1 binding']++
     )
 
-  // cloudSync used `household:${id}`; supabase-js already prefixes the topic
-  // with "realtime:", so a second colon may confuse topic routing.
+  // supabase-js already prefixes the topic with "realtime:", so a second colon
+  // may confuse topic routing. The name must not be one cloudSync itself uses,
+  // or sb.channel() hands back this same already-subscribed channel and
+  // subscribe() throws on .on().
   const chColon = sb
-    .channel(`household:${hh}`)
+    .channel(`dbg:colon:${hh}`)
     .on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'lists', filter: filterFor('lists') },
@@ -166,8 +168,18 @@ async function main() {
     waitSubscribed('21 binding', chMany),
   ])
 
-  // The real thing, exactly as the app calls it.
+  // The real thing, exactly as the app calls it. subscribe() does its channel
+  // setup in a detached async block, so a throw in there surfaces as an
+  // unhandled rejection rather than here — catch it so the variant table still
+  // gets printed.
   let subStatus = 'pending'
+  let subError: string | null = null
+  const onUnhandled = (err: unknown) => {
+    subError = err instanceof Error ? err.message : String(err)
+  }
+  process.on('unhandledRejection', onUnhandled)
+  process.on('uncaughtException', onUnhandled)
+
   const unsubscribe = subscribe(hh, () => void hits['cloudSync.subscribe()']++, {
     debounceMs: 50,
     onStatus: (s) => {
@@ -175,8 +187,8 @@ async function main() {
     },
   })
   const deadline = Date.now() + 20000
-  while (subStatus !== 'SUBSCRIBED' && Date.now() < deadline) await sleep(250)
-  console.log(`  cloudSync : ${subStatus}`)
+  while (subStatus !== 'SUBSCRIBED' && !subError && Date.now() < deadline) await sleep(250)
+  console.log(`  cloudSync : ${subError ? `THREW — ${subError}` : subStatus}`)
 
   await sleep(2000)
 
@@ -210,6 +222,8 @@ async function main() {
     console.log('  Mixed result — see the table above.')
   }
 
+  process.off('unhandledRejection', onUnhandled)
+  process.off('uncaughtException', onUnhandled)
   unsubscribe()
   await sb.removeAllChannels()
   await sb.auth.signOut()
