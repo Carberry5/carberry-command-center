@@ -147,6 +147,18 @@ async function main() {
   // --- write / update / delete ----------------------------------------------
 
   console.log('\nwrite')
+
+  // A run that fails before cleanup leaves its scratch list behind, and they
+  // accumulate. Sweep any strays from earlier runs first.
+  const strays = snapshot.lists.filter((l) => l.id.startsWith('smoke-'))
+  if (strays.length) {
+    const swept = structuredClone(snapshot)
+    swept.lists = swept.lists.filter((l) => !l.id.startsWith('smoke-'))
+    await pushChanges(snapshot, swept, hh)
+    snapshot = swept
+    ok(`swept ${strays.length} leftover scratch list${strays.length === 1 ? '' : 's'}`)
+  }
+
   const scratchId = `smoke-${Date.now()}`
 
   const withList = structuredClone(snapshot)

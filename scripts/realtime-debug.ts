@@ -216,8 +216,11 @@ async function main() {
     console.log('  The configuration is fine — the bug is elsewhere in subscribe():')
     console.log('  timing, the auth token, or the unsubscribe path.')
   } else if (Object.values(hits).every((n) => n > 0)) {
-    console.log('  Every variant received. subscribe() works here — so the failure in')
-    console.log('  cloud-smoke is about when it subscribes relative to the write.')
+    console.log('  Every variant received, cloudSync.subscribe() included — so channel')
+    console.log('  construction is not the problem. If cloud-smoke still sees nothing,')
+    console.log('  the remaining variable is timing: when it subscribes relative to the')
+    console.log('  write, or a channel left over from an earlier subscribe in the same')
+    console.log('  process.')
   } else {
     console.log('  Mixed result — see the table above.')
   }
