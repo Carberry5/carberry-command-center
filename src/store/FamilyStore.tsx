@@ -14,12 +14,19 @@ import { seed } from '../data/seed.ts'
 import { today } from '../lib/dates.ts'
 import { fetchHistory, type HistoryFact } from '../lib/onThisDay.ts'
 import { fetchWeather, type Weather } from '../lib/weather.ts'
+import * as cloud from './cloudSync.ts'
 import * as sync from './sync.ts'
+import { useAuth } from './auth.tsx'
 
 /**
  * One store for the whole app, mirroring the single stateful component the
  * design was prototyped as: family data, navigation, the parent lock, ambient
  * data (weather / history) and per-device display preferences.
+ *
+ * Storage is Supabase. The store keeps the last snapshot it knows the database
+ * holds, and every edit is diffed against that — so the `update(draft => …)`
+ * call sites throughout the app are unchanged from the vault era, while the
+ * traffic is proportional to the edit rather than to the whole document.
  */
 
 export interface DisplayPrefs {
@@ -46,10 +53,19 @@ interface PinPrompt {
   cb: () => void
 }
 
+export type SyncMode = 'connecting' | 'cloud' | 'local'
+
 interface StoreValue {
   data: FamilyData
-  mode: sync.SyncMode
-  vaultPath: string | null
+  mode: SyncMode
+  /** The household this device is reading and writing, when signed in. */
+  householdId: string | null
+  /**
+   * Whether a server is answering /api — the sidecar in development, the
+   * Cloudflare Functions in production. ICS syncing and 1Password reveals need
+   * one; the rest of the app does not.
+   */
+  serverOk: boolean
   /** Mutate a structural copy of the data; persists and syncs automatically. */
   update: (fn: (draft: FamilyData) => void) => void
   resetDemoData: () => void
@@ -87,9 +103,12 @@ interface StoreValue {
 const Ctx = createContext<StoreValue | null>(null)
 
 export function FamilyStoreProvider({ children }: { children: ReactNode }) {
+  const { phase } = useAuth()
+
   const [data, setData] = useState<FamilyData>(() => sync.loadLocal())
-  const [mode, setMode] = useState<sync.SyncMode>('connecting')
-  const [vaultPath, setVaultPath] = useState<string | null>(null)
+  const [mode, setMode] = useState<SyncMode>('connecting')
+  const [householdId, setHouseholdId] = useState<string | null>(null)
+  const [serverOk, setServerOk] = useState(false)
   const [toastMsg, setToastMsg] = useState<string | null>(null)
   const [parentUntil, setParentUntil] = useState(0)
   const [pinPrompt, setPinPrompt] = useState<PinPrompt | null>(null)
@@ -105,7 +124,9 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
 
   const dataRef = useRef(data)
   const modeRef = useRef(mode)
-  const revRef = useRef(0)
+  const hhRef = useRef<string | null>(null)
+  /** The last snapshot we know the database holds. Every diff is against this. */
+  const syncedRef = useRef<FamilyData | null>(null)
   const editSeq = useRef(0)
   const pushTimer = useRef<number | null>(null)
   const pushing = useRef(false)
@@ -123,32 +144,29 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
   // --- persistence ---------------------------------------------------------
 
   const flush = useCallback(async () => {
-    if (modeRef.current !== 'vault') {
+    if (modeRef.current !== 'cloud' || !hhRef.current || !syncedRef.current) {
       sync.saveLocal(dataRef.current)
       return
     }
-    const seq = editSeq.current
+    // Capture what we're about to push: anything typed while the request is in
+    // flight will diff against this snapshot on the next pass rather than being
+    // lost or sent twice.
+    const pushed = dataRef.current
     pushing.current = true
-    const result = await sync.pushState(revRef.current, dataRef.current)
-    pushing.current = false
-
-    if (result.status === 'offline') {
-      setMode('local')
-      modeRef.current = 'local'
-      sync.saveLocal(dataRef.current)
-      toast('Vault sidecar unreachable — saving on this device for now')
-      return
+    try {
+      await cloud.pushChanges(syncedRef.current, pushed, hhRef.current)
+      syncedRef.current = pushed
+    } catch {
+      // Leave syncedRef alone so the same delta is retried on the next edit,
+      // and keep a copy on the device meanwhile. Staying in cloud mode matters:
+      // dropping to local on one failed request would strand the family on a
+      // stale device copy for a blip.
+      sync.saveLocal(pushed)
+      toast('Could not save to the cloud just now — will retry')
+    } finally {
+      pushing.current = false
     }
-    revRef.current = result.envelope.rev
-    if (result.status === 'conflict') {
-      applyData(result.envelope.data)
-      editSeq.current += 1
-      toast('The vault changed elsewhere — reloaded the newer version')
-      return
-    }
-    // Only take the server's normalised copy if nothing was typed meanwhile.
-    if (seq === editSeq.current) applyData(result.envelope.data)
-  }, [applyData, toast])
+  }, [toast])
 
   const schedulePush = useCallback(() => {
     if (pushTimer.current) window.clearTimeout(pushTimer.current)
@@ -164,7 +182,7 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
       fn(next)
       editSeq.current += 1
       applyData(next)
-      if (modeRef.current === 'vault') schedulePush()
+      if (modeRef.current === 'cloud') schedulePush()
       else sync.saveLocal(next)
     },
     [applyData, schedulePush]
@@ -174,57 +192,89 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
     const fresh = migrate(seed())
     editSeq.current += 1
     applyData(fresh)
-    if (modeRef.current === 'vault') schedulePush()
+    if (modeRef.current === 'cloud') schedulePush()
     else sync.saveLocal(fresh)
     toast('Demo data reset')
   }, [applyData, schedulePush, toast])
 
-  // --- connect to the sidecar ---------------------------------------------
+  /** Re-reads everything. Cheap enough at family scale to beat patching in place. */
+  const refresh = useCallback(async () => {
+    const hh = hhRef.current
+    if (!hh) return
+    // Our own writes echo back. Skip while anything local is in flight or
+    // pending — the push we're mid-way through is newer than what we'd read.
+    if (pushing.current || pushTimer.current) return
+    try {
+      const fresh = await cloud.loadSnapshot(hh, dataRef.current)
+      if (pushing.current || pushTimer.current) return
+      syncedRef.current = fresh
+      applyData(fresh)
+    } catch {
+      /* a dropped read is not worth interrupting anyone over */
+    }
+  }, [applyData])
+
+  // --- connect -------------------------------------------------------------
 
   useEffect(() => {
+    if (phase === 'loading') return
+
+    if (phase !== 'signed-in') {
+      // Unconfigured build, or a deliberate "this device only" — localStorage.
+      modeRef.current = 'local'
+      setMode('local')
+      applyData(sync.loadLocal())
+      return
+    }
+
     let cancelled = false
     let unsubscribe: (() => void) | undefined
 
     void (async () => {
-      const h = await sync.health()
-      if (cancelled) return
-      if (!h) {
-        setMode('local')
-        modeRef.current = 'local'
-        return
-      }
-      setVaultPath(h.vault)
-      const envelope = await sync.fetchState()
-      if (cancelled) return
-      if (!envelope) {
-        setMode('local')
-        modeRef.current = 'local'
-        return
-      }
-      revRef.current = envelope.rev
-      applyData(migrate(envelope.data))
-      setMode('vault')
-      modeRef.current = 'vault'
+      try {
+        const hh = await cloud.currentHouseholdId()
+        if (cancelled) return
 
-      unsubscribe = sync.subscribe(
-        (env) => {
-          // Ignore our own echo and anything older than what we already have.
-          if (pushing.current || pushTimer.current) return
-          if (env.rev === revRef.current) return
-          revRef.current = env.rev
-          applyData(migrate(env.data))
-        },
-        () => {
-          /* EventSource retries on its own; nothing to do here */
+        if (!hh) {
+          modeRef.current = 'local'
+          setMode('local')
+          toast('This account is not linked to a household yet')
+          return
         }
-      )
+
+        hhRef.current = hh
+        setHouseholdId(hh)
+
+        // Deliberately not run through migrate(): that exists to repair old
+        // localStorage shapes, and on an empty household it would substitute
+        // the demo seed and then push it. An empty household should look empty.
+        const snapshot = await cloud.loadSnapshot(hh, dataRef.current)
+        if (cancelled) return
+
+        syncedRef.current = snapshot
+        applyData(snapshot)
+        modeRef.current = 'cloud'
+        setMode('cloud')
+
+        unsubscribe = cloud.subscribe(hh, () => void refresh())
+      } catch (err) {
+        if (cancelled) return
+        modeRef.current = 'local'
+        setMode('local')
+        toast(err instanceof Error ? err.message : 'Could not reach the family data')
+      }
     })()
 
     return () => {
       cancelled = true
       unsubscribe?.()
     }
-  }, [applyData])
+  }, [phase, applyData, refresh, toast])
+
+  // Is anything answering /api? The sidecar in dev, Functions in production.
+  useEffect(() => {
+    void sync.health().then((h) => setServerOk(!!h))
+  }, [])
 
   // Never lose the last edit when the tab goes away.
   useEffect(() => {
@@ -351,7 +401,8 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
     () => ({
       data,
       mode,
-      vaultPath,
+      householdId,
+      serverOk,
       update,
       resetDemoData,
       toast,
@@ -381,9 +432,9 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
       width,
     }),
     [
-      data, mode, vaultPath, update, resetDemoData, toast, toastMsg, parentUnlocked, requirePin,
-      toggleParentLock, pinPrompt, pinEntry, pinShake, pressPin, page, memberSel, go, openMember,
-      wx, reloadWeather, history, prefs, setPrefs, now, width,
+      data, mode, householdId, serverOk, update, resetDemoData, toast, toastMsg, parentUnlocked,
+      requirePin, toggleParentLock, pinPrompt, pinEntry, pinShake, pressPin, page, memberSel, go,
+      openMember, wx, reloadWeather, history, prefs, setPrefs, now, width,
     ]
   )
 

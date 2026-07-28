@@ -46,7 +46,7 @@ const primary = {
 
 /** Everything parent-only: the family, pre-flight setup, feeds, PIN, secrets, display. */
 export function SettingsPage() {
-  const { data, update, toast, prefs, setPrefs, mode, vaultPath, resetDemoData, reloadWeather } = useFamily()
+  const { data, update, toast, prefs, setPrefs, mode, householdId, resetDemoData, reloadWeather } = useFamily()
 
   const [zipMsg, setZipMsg] = useState('')
   const [newPin, setNewPin] = useState('')
@@ -495,19 +495,20 @@ export function SettingsPage() {
       {/* Where the data lives */}
       <div style={{ ...card, padding: '20px 22px' }}>
         <h2 style={{ ...HEADING, fontSize: '1.2em', margin: '0 0 6px' }}>Storage</h2>
-        {mode === 'vault' ? (
+        {mode === 'cloud' ? (
           <div style={{ fontWeight: 600, fontSize: '.9em', color: line(0.7) }}>
-            Syncing with the Obsidian vault at{' '}
+            Syncing with the{' '}
             <code style={{ background: 'rgba(35,42,61,.06)', padding: '2px 6px', borderRadius: 6 }}>
-              {vaultPath}
-            </code>
-            . Edits made in Obsidian appear here within a second, and vice versa.
+              {householdId}
+            </code>{' '}
+            household. Changes appear on every signed-in device within a second.
           </div>
+        ) : mode === 'connecting' ? (
+          <div style={{ fontWeight: 600, fontSize: '.9em', color: line(0.7) }}>Connecting…</div>
         ) : (
           <div style={{ fontWeight: 600, fontSize: '.9em', color: line(0.7) }}>
-            The vault sidecar isn't reachable, so this device is saving to its own browser storage.
-            Start it with <code style={{ background: 'rgba(35,42,61,.06)', padding: '2px 6px', borderRadius: 6 }}>npm run dev</code>{' '}
-            to sync with the vault again.
+            This device is saving to its own browser storage and not syncing. Sign in to join the
+            family's data.
           </div>
         )}
       </div>
@@ -517,7 +518,7 @@ export function SettingsPage() {
 
 /** ICS feeds. The sidecar fetches them server-side, which is what makes school calendars work. */
 function FeedsCard() {
-  const { data, update, toast, mode } = useFamily()
+  const { data, update, toast, serverOk } = useFamily()
   const [draft, setDraft] = useState({ name: '', url: '' })
 
   const sync = async (id: string, name: string) => {
@@ -526,7 +527,7 @@ function FeedsCard() {
       if (feed) feed.status = 'Syncing…'
     })
 
-    if (mode === 'vault') {
+    if (serverOk) {
       const result = await syncFeedOnServer(id)
       if (result.error) {
         update((d) => {
@@ -689,19 +690,19 @@ function FeedsCard() {
  * fetched from 1Password on demand, behind the parent PIN, and never persisted.
  */
 function SecretsCard() {
-  const { data, update, toast, mode } = useFamily()
+  const { data, update, toast, serverOk } = useFamily()
   const [draft, setDraft] = useState({ label: '', ref: '', note: '' })
   const [revealed, setRevealed] = useState<Record<string, string>>({})
   const [pin, setPin] = useState('')
   const [cliReady, setCliReady] = useState<boolean | null>(null)
 
   useEffect(() => {
-    if (mode !== 'vault') return
+    if (!serverOk) return
     void fetch('/api/health')
       .then((r) => r.json())
       .then((h: { onePassword?: boolean }) => setCliReady(!!h.onePassword))
       .catch(() => setCliReady(false))
-  }, [mode])
+  }, [serverOk])
 
   const reveal = async (id: string) => {
     if (pin.length !== 4) {
