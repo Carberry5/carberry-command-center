@@ -780,6 +780,13 @@ export async function pushChanges(
  * The sidecar pushed a whole envelope on each vault write, and the store was
  * built around that; so rather than patching row events into state, we debounce
  * them and hand back a fresh snapshot. Returns an unsubscribe function.
+ *
+ * Realtime evaluates RLS as the subscribing user, so the socket needs the
+ * session's access token before the channel is created. Without it the socket
+ * authenticates with the anon key, matches none of the household policies, and
+ * delivers nothing — while still reporting SUBSCRIBED. That failure is
+ * completely silent, which is why the token is set explicitly here rather than
+ * left to supabase-js, and refreshed when the session rolls over.
  */
 export function subscribe(
   householdId: string,
@@ -789,6 +796,7 @@ export function subscribe(
   const debounceMs = opts.debounceMs ?? 150
   const sb = supabase()
   let timer: ReturnType<typeof setTimeout> | null = null
+  let channel: RealtimeChannel | null = null
   let closed = false
 
   const ping = () => {
@@ -800,26 +808,40 @@ export function subscribe(
     }, debounceMs)
   }
 
-  let channel: RealtimeChannel = sb.channel(`household:${householdId}`)
-  for (const table of WRITE_ORDER) {
-    channel = channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table,
-        filter: table === 'households' ? `id=eq.${householdId}` : `household_id=eq.${householdId}`,
-      },
-      ping
-    )
-  }
-  // SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED — worth surfacing, since a
-  // channel that never reaches SUBSCRIBED fails silently otherwise.
-  void channel.subscribe((status) => opts.onStatus?.(status))
+  // A refreshed JWT has to reach the socket too, or events stop arriving an
+  // hour in — the same silence, just delayed.
+  const { data: authSub } = sb.auth.onAuthStateChange((_event, session) => {
+    if (session?.access_token) void sb.realtime.setAuth(session.access_token)
+  })
+
+  void (async () => {
+    const { data } = await sb.auth.getSession()
+    if (data.session?.access_token) await sb.realtime.setAuth(data.session.access_token)
+    if (closed) return
+
+    let ch = sb.channel(`household:${householdId}`)
+    for (const table of WRITE_ORDER) {
+      ch = ch.on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table,
+          filter: table === 'households' ? `id=eq.${householdId}` : `household_id=eq.${householdId}`,
+        },
+        ping
+      )
+    }
+    channel = ch
+    // SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED. Worth surfacing: on its
+    // own, SUBSCRIBED is not evidence that anything will actually arrive.
+    ch.subscribe((status) => opts.onStatus?.(status))
+  })()
 
   return () => {
     closed = true
     if (timer) clearTimeout(timer)
-    void sb.removeChannel(channel)
+    authSub.subscription.unsubscribe()
+    if (channel) void sb.removeChannel(channel)
   }
 }

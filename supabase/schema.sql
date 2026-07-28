@@ -653,6 +653,12 @@ begin
   end if;
 
   foreach t in array watched loop
+    -- Default replica identity writes only the primary key to the WAL on
+    -- DELETE, so household_id is absent from the old record and a subscription
+    -- filtered on household_id drops delete events entirely — inserts and
+    -- updates arrive, deletes vanish. FULL puts the whole old row in the WAL.
+    execute format('alter table public.%I replica identity full', t);
+
     if not exists (
       select 1 from pg_publication_tables
       where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

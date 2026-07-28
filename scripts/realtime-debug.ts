@@ -124,19 +124,32 @@ async function main() {
   console.log(`  unfiltered                        : ${u.length ? u.map((e) => e.event).join(', ') : 'NOTHING'}`)
 
   console.log('\nverdict')
+  const has = (s: Seen[], e: string) => s.some((x) => x.event === e)
+
   if (!f.length && !u.length) {
     console.log('  Realtime cannot read these rows at all.')
-    console.log('  Most likely RLS: the replication slot evaluates policies as the')
-    console.log('  subscribing user, and sees nothing. Check that public.lists is really')
-    console.log('  in the publication, and try REPLICA IDENTITY FULL.')
+    console.log('  Most likely RLS: Realtime evaluates policies as the subscribing user,')
+    console.log('  and an unauthenticated socket matches nothing. Check that public.lists')
+    console.log('  is really in the publication, and that the access token reached the')
+    console.log('  socket (this script sets it explicitly — cloudSync must too).')
   } else if (u.length && !f.length) {
     console.log('  The household_id filter is the problem — unfiltered works.')
-    console.log('  cloudSync.subscribe should drop the filter and scope by household')
-    console.log('  after the fact, or the filter syntax needs correcting.')
-  } else if (f.some((e) => e.event === 'INSERT') && !f.some((e) => e.event === 'UPDATE')) {
-    console.log('  INSERT arrives but UPDATE does not — REPLICA IDENTITY is not FULL.')
+    console.log('  Either correct the filter syntax or drop it and scope client-side.')
   } else {
-    console.log('  Realtime is delivering correctly. The fault is in cloudSync.subscribe.')
+    // Both channels saw traffic, so the connection and RLS are fine. Anything
+    // missing from here is a per-event-type gap.
+    if (has(u, 'DELETE') && !has(f, 'DELETE')) {
+      console.log('  INSERT and UPDATE arrive on the filtered channel but DELETE does not.')
+      console.log('  REPLICA IDENTITY is not FULL: the delete record carries only the')
+      console.log('  primary key, so household_id is absent and the filter cannot match.')
+      console.log('  Fix: alter table … replica identity full (schema.sql does this).')
+    } else if (!has(f, 'UPDATE')) {
+      console.log('  INSERT arrives but UPDATE does not — check REPLICA IDENTITY.')
+    } else {
+      console.log('  Realtime is delivering every event type correctly.')
+      console.log('  If cloudSync.subscribe still sees nothing, the fault is there —')
+      console.log('  most likely the socket never received the session access token.')
+    }
   }
 
   await sb.removeAllChannels()

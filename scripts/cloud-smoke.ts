@@ -212,29 +212,50 @@ async function main() {
   assert.equal(status, 'SUBSCRIBED', `channel never subscribed (last status: ${status})`)
   ok('channel reached SUBSCRIBED')
 
+  const waitForEvent = async (from: number, label: string, ms = 15000) => {
+    const deadline = Date.now() + ms
+    while (fired === from && Date.now() < deadline) await sleep(250)
+    assert(fired > from, label)
+  }
+
   const ping = structuredClone(after)
   ping.lists.find((l) => l.id === scratchId)!.name = 'Smoke test (poked)'
   await pushChanges(after, ping, hh)
   after = ping
 
-  const rtDeadline = Date.now() + 15000
-  while (fired === 0 && Date.now() < rtDeadline) await sleep(250)
-  unsubscribe()
-  assert(
-    fired > 0,
-    'no realtime event arrived — check the tables are in the supabase_realtime publication'
+  await waitForEvent(
+    0,
+    'no realtime event arrived for an UPDATE. If the channel reached SUBSCRIBED, ' +
+      'the socket is probably unauthenticated — Realtime evaluates RLS as the ' +
+      'subscribing user and silently matches nothing.'
   )
-  ok(`change notification received (${fired} event${fired === 1 ? '' : 's'})`)
+  ok(`update notification received (${fired} event${fired === 1 ? '' : 's'})`)
 
-  // --- cleanup ---------------------------------------------------------------
+  // --- cleanup, which doubles as the DELETE notification check ---------------
 
   console.log('\ncleanup')
+  const beforeDelete = fired
   const cleaned = structuredClone(after)
   cleaned.lists = cleaned.lists.filter((l) => l.id !== scratchId)
   await pushChanges(after, cleaned, hh)
+
   const final = await loadSnapshot(hh, base)
   assert(!final.lists.some((l) => l.id === scratchId), 'scratch list survived cleanup')
   ok('cascade delete: scratch list and its items removed')
+
+  // Deletes are the case default replica identity breaks: only the primary key
+  // reaches the WAL, so household_id is missing and a household-filtered
+  // subscription drops the event. Inserts and updates still arrive, which makes
+  // this easy to miss.
+  await waitForEvent(
+    beforeDelete,
+    'UPDATE notifications arrive but DELETE ones do not — the watched tables ' +
+      'need REPLICA IDENTITY FULL, otherwise household_id is absent from the ' +
+      'delete record and the household filter cannot match it.'
+  )
+  ok('delete notification received (replica identity is FULL)')
+
+  unsubscribe()
 
   await sb.auth.signOut()
   console.log(`\nALL ${passed} CLOUD CHECKS PASSED`)
