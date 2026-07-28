@@ -37,13 +37,20 @@ const WRITE = argv.has('--write') || argv.has('--seed')
 const SEED = argv.has('--seed')
 const FORCE = argv.has('--force')
 
+const die = (msg: string): never => {
+  console.error(msg)
+  process.exit(1)
+}
+
 const need = (name: string): string => {
   const v = process.env[name]
-  if (!v) {
-    console.error(`missing ${name} — see the header of this file`)
-    process.exit(1)
+  if (!v) die(`missing ${name} — see the header of this file`)
+  // Catches a pasted placeholder, which otherwise fails much later and much
+  // less legibly (Supabase just says "Invalid API key").
+  if (/^(PASTE|YOUR|<|…|\.\.\.)/i.test(v!) || /_HERE$/i.test(v!)) {
+    die(`${name} is still a placeholder ("${v}") — replace it with the real value`)
   }
-  return v
+  return v!
 }
 
 let passed = 0
@@ -60,9 +67,16 @@ async function main() {
   const email = need('CC_EMAIL')
   const password = need('CC_PASSWORD')
 
-  if (anon.includes('service_role')) {
-    console.error('that looks like the service role key — use the anon key')
-    process.exit(1)
+  // Both key generations: legacy JWTs (eyJ… / service_role) and the newer
+  // sb_publishable_ / sb_secret_ pair.
+  if (anon.includes('service_role') || anon.startsWith('sb_secret_')) {
+    die('that is the secret / service_role key — use the anon (publishable) one')
+  }
+  if (!anon.startsWith('eyJ') && !anon.startsWith('sb_publishable_')) {
+    die(
+      `VITE_SUPABASE_ANON_KEY does not look like a Supabase key (starts "${anon.slice(0, 8)}"). ` +
+        'Copy it from Project Settings -> API.'
+    )
   }
 
   const sb = configureCloud(url, anon, { persistSession: false })
