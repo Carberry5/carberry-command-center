@@ -1,0 +1,244 @@
+/**
+ * Exercises src/store/cloudSync.ts against a real Postgres running
+ * supabase/schema.sql. It cannot reach Supabase's PostgREST or realtime layers,
+ * but it does prove the part that was written blind: that every column
+ * cloudSync names exists with a compatible type, and that
+ * FamilyData -> rows -> FamilyData is lossless.
+ *
+ *   PGURL=postgres://postgres@127.0.0.1:55432/cctest npx tsx scripts/cloudsync-test.ts
+ */
+
+import pg from 'pg'
+import assert from 'node:assert/strict'
+import { migrate } from '../src/data/migrate.ts'
+import { seed } from '../src/data/seed.ts'
+import {
+  PRIMARY_KEYS,
+  WRITE_ORDER,
+  compositeDeleteFilter,
+  diff,
+  fromRows,
+  toRows,
+  type Row,
+  type TableName,
+  type TableRows,
+} from '../src/store/cloudSync.ts'
+import type { FamilyData } from '../src/types.ts'
+
+// Match what supabase-js actually receives over PostgREST rather than what the
+// pg driver defaults to: dates as "YYYY-MM-DD" strings, bigint/numeric as JSON
+// numbers.
+pg.types.setTypeParser(1082, (v) => v) // date
+pg.types.setTypeParser(20, (v) => Number(v)) // int8
+pg.types.setTypeParser(1700, (v) => Number(v)) // numeric
+
+const HH = 'hh_test'
+const url = process.env.PGURL ?? 'postgres://postgres@127.0.0.1:55432/cctest'
+
+let passed = 0
+function ok(label: string) {
+  passed++
+  console.log(`  ok: ${label}`)
+}
+
+async function main() {
+  const db = new pg.Client({ connectionString: url })
+  await db.connect()
+
+  const data: FamilyData = migrate(seed())
+
+  // --- insert a full snapshot ------------------------------------------------
+
+  console.log('\ninsert a full snapshot')
+  await db.query('delete from public.households where id = $1', [HH])
+
+  const rows = toRows(data, HH)
+  for (const table of WRITE_ORDER) {
+    for (const row of rows[table]) {
+      const cols = Object.keys(row)
+      const params = cols.map((_, i) => `$${i + 1}`).join(', ')
+      await db.query(
+        `insert into public.${table} (${cols.map((c) => `"${c}"`).join(', ')}) values (${params})`,
+        cols.map((c) => row[c])
+      )
+    }
+  }
+  ok(`inserted ${WRITE_ORDER.reduce((n, t) => n + rows[t].length, 0)} rows across ${WRITE_ORDER.length} tables`)
+
+  // --- read it back and rebuild ---------------------------------------------
+
+  console.log('\nround-trip FamilyData -> rows -> FamilyData')
+  const back = {} as TableRows
+  for (const table of WRITE_ORDER) {
+    const col = table === 'households' ? 'id' : 'household_id'
+    const res = await db.query(`select * from public.${table} where ${col} = $1`, [HH])
+    back[table] = res.rows as Row[]
+  }
+
+  const rebuilt = fromRows(back, data)
+
+  for (const key of Object.keys(data) as (keyof FamilyData)[]) {
+    // feedEv is a cache the ICS sync repopulates; it is deliberately not stored.
+    if (key === 'feedEv') continue
+    assert.deepEqual(rebuilt[key], data[key], `mismatch in "${key}"`)
+    ok(`${key} round-tripped intact`)
+  }
+  assert.deepEqual(rebuilt.feedEv, {}, 'feedEv should come back empty')
+  ok('feedEv is not persisted (as designed)')
+
+  // --- the differ ------------------------------------------------------------
+
+  console.log('\ndiffer')
+  assert.deepEqual(diff(data, data, HH), [], 'identical snapshots must produce no writes')
+  ok('no change produces no mutations')
+
+  const tickChore = structuredClone(data)
+  const today = Object.keys(tickChore.done)[0]
+  tickChore.done[today]['c5|r'] = 1
+  const m1 = diff(data, tickChore, HH)
+  assert.equal(m1.length, 1, 'ticking a chore should touch exactly one table')
+  assert.equal(m1[0].table, 'chore_log')
+  assert.equal(m1[0].upsert.length, 1)
+  assert.equal(m1[0].remove.length, 0)
+  ok('ticking one chore box -> 1 chore_log upsert, nothing else')
+
+  const untick = structuredClone(tickChore)
+  delete untick.done[today]['c5|r']
+  const m2 = diff(tickChore, untick, HH)
+  assert.equal(m2.length, 1)
+  assert.equal(m2[0].remove.length, 1)
+  assert.equal(m2[0].upsert.length, 0)
+  ok('unticking it -> 1 chore_log delete')
+
+  const rename = structuredClone(data)
+  rename.members[0].name = 'Pat'
+  const m3 = diff(data, rename, HH)
+  assert.equal(m3.length, 1)
+  assert.equal(m3[0].table, 'members')
+  assert.equal(m3[0].upsert.length, 1)
+  ok('renaming a member -> 1 members upsert')
+
+  const dropItem = structuredClone(data)
+  const removedId = dropItem.lists[0].items[2].id
+  dropItem.lists[0].items.splice(2, 1)
+  const m4 = diff(data, dropItem, HH)
+  const items = m4.find((m) => m.table === 'list_items')
+  assert(items, 'expected a list_items mutation')
+  assert.equal(items.remove.length, 1)
+  assert.equal(items.remove[0].id, removedId)
+  // The items after it shift up, so their sort_order changes too.
+  assert.equal(items.upsert.length, dropItem.lists[0].items.length - 2)
+  ok('deleting a list item -> 1 delete + resequenced siblings only')
+
+  const addEvent = structuredClone(data)
+  addEvent.events.push({
+    id: 'ev_new', title: 'Orthodontist', date: '2026-08-03', start: '09:00',
+    dur: 30, memberIds: ['c', 'e'], loc: 'Dr. Reyes', recur: null,
+  })
+  const m5 = diff(data, addEvent, HH)
+  const ev = m5.find((m) => m.table === 'events')
+  const evm = m5.find((m) => m.table === 'event_members')
+  assert.equal(ev?.upsert.length, 1)
+  assert.equal(evm?.upsert.length, 2)
+  ok('adding an event -> 1 event + 2 event_member rows')
+
+  const settingsOnly = structuredClone(data)
+  settingsOnly.settings.place = 'Sterling, VA'
+  const m6 = diff(data, settingsOnly, HH)
+  assert.equal(m6.length, 1)
+  assert.equal(m6[0].table, 'households')
+  ok('changing a setting -> households only')
+
+  // --- the diff actually applies against the real schema ---------------------
+
+  console.log('\napply a diff to the database')
+  const applied = diff(data, addEvent, HH)
+  for (const m of applied) {
+    for (const row of m.upsert) {
+      const cols = Object.keys(row)
+      const conflict = PRIMARY_KEYS[m.table as TableName]
+      const updates = cols.filter((c) => !conflict.includes(c))
+      // A table whose every column is part of the key (chore_log) has nothing
+      // to update — the row's existence *is* the value.
+      const action = updates.length
+        ? `do update set ${updates.map((c) => `"${c}" = excluded."${c}"`).join(', ')}`
+        : 'do nothing'
+      await db.query(
+        `insert into public.${m.table} (${cols.map((c) => `"${c}"`).join(', ')})
+         values (${cols.map((_, i) => `$${i + 1}`).join(', ')})
+         on conflict (${conflict.map((c) => `"${c}"`).join(', ')}) ${action}`,
+        cols.map((c) => row[c])
+      )
+    }
+  }
+  const after = await db.query('select count(*)::int as n from public.events where household_id = $1', [HH])
+  assert.equal(after.rows[0].n, data.events.length + 1)
+  ok('upserts applied cleanly; event count grew by exactly 1')
+
+  // Confirm the on-conflict targets the diff generates are real unique indexes.
+  console.log('\nupsert conflict targets exist as unique constraints')
+  for (const table of WRITE_ORDER) {
+    const pk = PRIMARY_KEYS[table]
+    const res = await db.query(
+      `select 1 from pg_index i
+         join pg_class c on c.oid = i.indrelid
+        where c.relname = $1 and i.indisunique
+          and (select array_agg(a.attname::text order by a.attname)
+                 from pg_attribute a
+                where a.attrelid = c.oid and a.attnum = any(i.indkey)) = (
+                select array_agg(x order by x) from unnest($2::text[]) x)`,
+      [table, pk]
+    )
+    assert.equal(res.rowCount, 1, `no unique index on ${table}(${pk.join(', ')})`)
+  }
+  ok(`all ${WRITE_ORDER.length} upsert conflict targets are backed by unique indexes`)
+
+  // --- composite delete filters ---------------------------------------------
+
+  console.log('\ncomposite delete filter (PostgREST grammar)')
+  assert.equal(
+    compositeDeleteFilter(
+      [{ event_id: 'ev1', member_id: 'c' }, { event_id: 'ev2', member_id: 'h' }],
+      ['event_id', 'member_id']
+    ),
+    'and(event_id.eq.ev1,member_id.eq.c),and(event_id.eq.ev2,member_id.eq.h)'
+  )
+  ok('two-column filter matches the documented or=(and(…),and(…)) shape')
+
+  assert.equal(
+    compositeDeleteFilter([{ household_id: HH, day: '2026-08-03' }], ['household_id', 'day']),
+    `and(household_id.eq.${HH},day.eq.2026-08-03)`
+  )
+  ok('dates pass through unquoted (hyphens are filter-safe)')
+
+  assert.equal(
+    compositeDeleteFilter([{ a: 'has space', b: 'q"uote' }], ['a', 'b']),
+    'and(a.eq."has space",b.eq."q\\"uote")'
+  )
+  ok('values needing quotes are quoted and escaped')
+
+  // --- deletes identify exactly one row each ---------------------------------
+
+  console.log('\ndelete keys uniquely identify their rows')
+  for (const m of diff(addEvent, data, HH)) {
+    for (const row of m.remove) {
+      const cols = Object.keys(row)
+      const where = cols.map((c, i) => `"${c}" = $${i + 1}`).join(' and ')
+      const res = await db.query(
+        `select count(*)::int as n from public.${m.table} where ${where}`,
+        cols.map((c) => row[c])
+      )
+      assert(res.rows[0].n <= 1, `${m.table} delete key matched ${res.rows[0].n} rows`)
+    }
+  }
+  ok('every generated delete key matches at most one row')
+
+  await db.query('delete from public.households where id = $1', [HH])
+  await db.end()
+  console.log(`\nALL ${passed} CLOUDSYNC CHECKS PASSED`)
+}
+
+main().catch((err) => {
+  console.error('\nFAILED:', err instanceof Error ? err.message : err)
+  process.exit(1)
+})
