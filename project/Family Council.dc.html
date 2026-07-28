@@ -1,0 +1,1774 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;background:#F4F6FB}
+a{color:#3D6DE8}a:hover{color:#2A4FB8}
+input,textarea,button,select{font-family:inherit}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulseRing{0%{box-shadow:0 0 0 0 rgba(124,92,224,.4)}70%{box-shadow:0 0 0 24px rgba(124,92,224,0)}100%{box-shadow:0 0 0 0 rgba(124,92,224,0)}}
+@keyframes shakeA{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+@keyframes shakeB{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-9px)}40%,80%{transform:translateX(9px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</helmet>
+<div style="min-height:100vh;display:flex;align-items:stretch;font-family:'Plus Jakarta Sans',sans-serif;color:#232A3D;background:#F4F6FB;font-size:{{ rootFs }}px">
+<nav style="{{ railStyle }}">
+  <div style="{{ brandStyle }}">
+    <div style="width:38px;height:38px;border-radius:12px;background:#232A3D;display:flex;align-items:center;justify-content:center;flex-shrink:0"><svg width="22" height="22" viewBox="0 0 24 24" fill="#7C5CE0"><path d="M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z"></path></svg></div>
+    <span style="{{ brandLbl }}">Carberry<br>Command Center</span>
+  </div>
+  <sc-for list="{{ navItems }}" as="ni" hint-placeholder-count="8">
+    <button onClick="{{ ni.go }}" style="{{ ni.st }}">
+      <svg width="23" height="23" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="{{ ni.d }}"></path></svg>
+      <span style="{{ ni.ls }}">{{ ni.label }}</span>
+    </button>
+  </sc-for>
+  <div style="{{ famRowStyle }}">
+    <sc-for list="{{ famDots }}" as="fd" hint-placeholder-count="4">
+      <button onClick="{{ fd.go }}" title="{{ fd.n }}" style="{{ fd.st }}">{{ fd.i }}</button>
+    </sc-for>
+  </div>
+</nav>
+<main style="flex:1;min-width:0;display:flex;flex-direction:column">
+  <header style="{{ headerStyle }}">
+    <div>
+      <h1 style="font-family:'Outfit';font-weight:600;font-size:1.7em;margin:0;letter-spacing:.2px">{{ pageTitle }}</h1>
+      <div style="color:rgba(35,42,61,.58);font-weight:600;font-size:.85em;margin-top:2px">{{ dateLong }}</div>
+    </div>
+    <div style="flex:1"></div>
+    <sc-if value="{{ wxHead }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:center;gap:7px;background:#FFFFFF;border:1px solid rgba(35,42,61,.12);border-radius:999px;padding:8px 14px 8px 10px;font-weight:700;font-size:.9em">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#E2924A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ wxHeadD }}"></path></svg>
+        <span>{{ wxHeadT }}</span><span style="color:rgba(35,42,61,.5);font-weight:600">{{ wxHiLo }}</span>
+      </div>
+    </sc-if>
+    <div style="font-family:'Outfit';font-weight:600;font-size:1.35em;background:#FFFFFF;border:1px solid rgba(35,42,61,.12);border-radius:999px;padding:6px 16px">{{ clockStr }}</div>
+    <button onClick="{{ onMic }}" title="Voice command" style="{{ micStyle }}"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9.5" y="3.5" width="5" height="10.5" rx="2.5"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17.5V21"></path></svg></button>
+    <button onClick="{{ onLock }}" title="Parent lock" style="{{ lockStyle }}">
+      <sc-if value="{{ lockOpen }}" hint-placeholder-val="{{ false }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="11" width="12" height="9" rx="2.2"></rect><path d="M9 11V8a3 3 0 0 1 5.8-1"></path></svg></sc-if>
+      <sc-if value="{{ lockShut }}" hint-placeholder-val="{{ true }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="11" width="12" height="9" rx="2.2"></rect><path d="M9 11V8a3 3 0 0 1 6 0v3"></path></svg></sc-if>
+    </button>
+  </header>
+  <div style="{{ contentStyle }}">
+
+  <sc-if value="{{ pgToday }}" hint-placeholder-val="{{ true }}">
+  <section data-screen-label="Today" style="animation:fadeUp .35s ease both">
+    <div style="background:linear-gradient(120deg,#FFFFFF,#E4EBFC);border:1px solid rgba(35,42,61,.1);border-radius:24px;box-shadow:0 10px 30px -22px rgba(35,42,61,.35);padding:12px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="flex:1;min-width:220px">
+        <div style="font-family:'Outfit';font-weight:600;font-size:1.45em;line-height:1.15">{{ greet }}</div>
+        <div style="color:rgba(35,42,61,.62);font-weight:600;margin-top:1px;font-size:.9em">{{ heroSub }}</div>
+      </div>
+      <sc-if value="{{ wxBig }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:10px;background:rgba(255,255,255,.75);border:1px solid rgba(35,42,61,.1);border-radius:14px;padding:6px 13px">
+          <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#E2924A" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{ wxBigD }}"></path></svg>
+          <div>
+            <div style="font-family:'Outfit';font-weight:600;font-size:1.35em;line-height:1">{{ wxBigT }}</div>
+            <div style="color:rgba(35,42,61,.6);font-weight:600;font-size:.78em;margin-top:2px">{{ wxBigHiLo }} · {{ wxPlace }}</div>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+    <sc-if value="{{ pfOn }}" hint-placeholder-val="{{ false }}">
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:14px 16px;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px;flex-wrap:wrap">
+        <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="#3D6DE8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"></path></svg>
+        <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">Morning pre-flight</h2>
+        <span style="font-weight:600;font-size:.82em;color:rgba(35,42,61,.5)">School-day checklist</span>
+        <div style="flex:1"></div>
+        <span style="{{ pfDepSt }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2"></path></svg>{{ pfDepLbl }}</span>
+        <span style="font-weight:800;font-size:.82em;color:#2A4FB8;background:rgba(61,109,232,.12);border-radius:999px;padding:5px 12px">{{ pfProg }}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px">
+        <sc-for list="{{ pfKids }}" as="pk2" hint-placeholder-count="3">
+          <div style="border:1.5px solid {{ pk2.bc }};border-radius:16px;padding:8px 10px">
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:3px">
+              <div style="{{ pk2.avSt }}">{{ pk2.init }}</div>
+              <div style="font-weight:700;flex:1">{{ pk2.name }}</div>
+              <span style="{{ pk2.progSt }}">{{ pk2.prog }}</span>
+            </div>
+            <sc-for list="{{ pk2.rows }}" as="pr" hint-placeholder-count="5">
+              <div onClick="{{ pr.tog }}" style="{{ pr.rowSt }}">
+                <div style="{{ pr.ckSt }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ pr.ckD }}"></path></svg></div>
+                <div style="flex:1;font-weight:700;font-size:.86em;line-height:1.3;text-decoration:{{ pr.deco }};opacity:{{ pr.op }}">{{ pr.text }}</div>
+                <span style="{{ pr.bdSt }}">{{ pr.bd }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+    <div style="display:grid;gap:12px;grid-template-columns:{{ todayCols }};align-items:start">
+      <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:14px 16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+          <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">Today's plan</h2>
+          <div style="flex:1"></div>
+          <button onClick="{{ onAddEventT }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:.85em;min-height:40px">+ Add event</button>
+        </div>
+        <sc-if value="{{ agendaEmpty }}" hint-placeholder-val="{{ false }}">
+          <div style="color:rgba(35,42,61,.55);font-weight:600;padding:12px 6px;text-align:center">A blank day — how rare! Tap “+ Add event” to fill it in.</div>
+        </sc-if>
+        <sc-for list="{{ agenda }}" as="ag" hint-placeholder-count="3">
+          <div onClick="{{ ag.click }}" style="{{ ag.st }}">
+            <div style="width:78px;flex-shrink:0;font-weight:700;font-size:.86em;color:rgba(35,42,61,.62)">{{ ag.time }}</div>
+            <div style="width:5px;align-self:stretch;border-radius:99px;background:{{ ag.bar }}"></div>
+            <div style="flex:1;min-width:0">
+              <div style="font-weight:700;font-size:.98em">{{ ag.title }}</div>
+              <div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.8em;display:{{ ag.locDisp }}">{{ ag.loc }}</div>
+            </div>
+            <sc-for list="{{ ag.rides }}" as="agr" hint-placeholder-count="1"><div style="{{ agr.st }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ agr.d }}"></path></svg>{{ agr.t }}</div></sc-for>
+            <div style="display:flex;gap:4px">
+              <sc-for list="{{ ag.dots }}" as="dt" hint-placeholder-count="1"><div style="width:12px;height:12px;border-radius:50%;border:2px solid #FFFFFF;background:{{ dt.c }}"></div></sc-for>
+            </div>
+            <sc-if value="{{ ag.wxOn }}" hint-placeholder-val="{{ false }}">
+              <div style="display:flex;align-items:center;gap:4px;color:rgba(35,42,61,.6);font-weight:700;font-size:.78em;background:rgba(35,42,61,.05);border-radius:999px;padding:4px 9px">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ag.wD }}"></path></svg>{{ ag.wT }}
+              </div>
+            </sc-if>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:grid;gap:12px">
+        <div style="background:linear-gradient(140deg,#232A3D,#454FA0);border-radius:22px;padding:14px 18px;color:#F7F9FF;box-shadow:0 10px 26px -18px rgba(35,42,61,.5)">
+          <div style="font-weight:700;font-size:.72em;letter-spacing:.14em;color:#7C5CE0;margin-bottom:5px">QUOTE OF THE WEEK</div>
+          <div style="font-family:'Outfit';font-weight:500;font-size:1.02em;line-height:1.4">“{{ quoteText }}”</div>
+          <div style="font-weight:600;font-size:.82em;opacity:.75;margin-top:8px">— {{ quoteWho }}</div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:14px 16px">
+          <div style="display:flex;align-items:center;margin-bottom:6px"><h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">This day in history</h2><div style="flex:1"></div><button onClick="{{ tdhNext }}" style="display:{{ tdhMoreSt }};background:none;border:none;color:#3D6DE8;font-weight:700;cursor:pointer;font-size:.85em;padding:6px">New fact →</button></div>
+          <sc-if value="{{ tdhOn }}" hint-placeholder-val="{{ false }}">
+            <div style="display:flex;align-items:flex-start;gap:12px">
+              <div style="min-width:66px;text-align:center;font-family:'Outfit';font-weight:600;border-radius:12px;padding:8px 6px;color:#8A5A1E;background:rgba(226,146,74,.16)"><div style="font-size:1.15em;line-height:1">{{ tdhYear }}</div><div style="font-size:.55em;font-weight:600;opacity:.85;letter-spacing:.05em;margin-top:3px">{{ tdhAgo }}</div></div>
+              <div style="flex:1;font-weight:600;font-size:.93em;line-height:1.5;color:rgba(35,42,61,.85)">{{ tdhText }}</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ tdhMsgOn }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.9em">{{ tdhMsg }}</div></sc-if>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:14px 16px">
+          <div style="display:flex;align-items:center;margin-bottom:4px"><h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">Chore stars</h2><div style="flex:1"></div><button onClick="{{ goChores }}" style="background:none;border:none;color:#3D6DE8;font-weight:700;cursor:pointer;font-size:.85em;padding:6px">Open →</button></div>
+          <sc-for list="{{ kidsMini }}" as="km" hint-placeholder-count="3">
+            <div onClick="{{ km.go }}" style="display:flex;align-items:center;gap:12px;padding:5px 0;cursor:pointer;border-radius:12px">
+              <div style="{{ km.avSt }}">{{ km.init }}</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;justify-content:space-between;font-weight:700;font-size:.9em"><span>{{ km.name }}</span><span style="color:rgba(35,42,61,.55)">{{ km.doneN }}/{{ km.totN }}</span></div>
+                <div style="height:9px;border-radius:99px;background:rgba(35,42,61,.08);margin-top:5px;overflow:hidden"><div style="height:100%;border-radius:99px;transition:width .4s;background:{{ km.c }};width:{{ km.barW }}"></div></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;font-weight:800;color:#6D4FD1;background:rgba(124,92,224,.14);border-radius:999px;padding:5px 11px;font-size:.85em"><svg width="14" height="14" viewBox="0 0 24 24" fill="#7C5CE0"><path d="M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z"></path></svg>{{ km.bal }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:14px 16px">
+          <div style="display:flex;align-items:center;margin-bottom:4px"><h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">Dinner</h2><div style="flex:1"></div><button onClick="{{ goMeals }}" style="background:none;border:none;color:#3D6DE8;font-weight:700;cursor:pointer;font-size:.85em;padding:6px">Plan →</button></div>
+          <div style="font-weight:700;font-size:1.05em">Tonight: <span style="color:#1F8A5B">{{ dinT }}</span></div>
+          <div style="color:rgba(35,42,61,.58);font-weight:600;font-size:.88em;margin-top:4px">Tomorrow: {{ dinTo }}</div>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:14px 16px">
+          <div style="display:flex;align-items:center;margin-bottom:4px"><h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">Coming up</h2><div style="flex:1"></div><button onClick="{{ goCds }}" style="background:none;border:none;color:#3D6DE8;font-weight:700;cursor:pointer;font-size:.85em;padding:6px">All →</button></div>
+          <sc-for list="{{ cdMini }}" as="cm" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+              <div style="min-width:52px;text-align:center;font-family:'Outfit';font-weight:600;border-radius:12px;padding:5px 7px;color:#F7F9FF;background:{{ cm.c }}"><div style="font-size:1.2em;line-height:1">{{ cm.days }}</div><div style="font-size:.55em;font-weight:600;opacity:.9">DAYS</div></div>
+              <div><div style="font-weight:700;font-size:.95em">{{ cm.title }}</div><div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.78em">{{ cm.dateS }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgMem }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Member page" style="animation:fadeUp .35s ease both">
+    <div style="background:{{ memHeroBg }};border:1px solid rgba(35,42,61,.1);border-radius:24px;padding:22px 26px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:18px;position:relative;overflow:hidden;color:{{ memHeroFg }}">
+      <sc-for list="{{ memDeco }}" as="dec" hint-placeholder-count="1"><svg viewBox="0 0 24 24" fill="{{ dec.f }}" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="{{ dec.st }}"><path d="{{ dec.d }}"></path></svg></sc-for>
+      <div style="{{ memAvFull }}">{{ memInit }}</div>
+      <div style="flex:1;min-width:180px;position:relative;z-index:1">
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div style="font-family:'Outfit';font-weight:600;font-size:1.9em;line-height:1.1">{{ memName }}</div>
+          <sc-if value="{{ memTagOn }}" hint-placeholder-val="{{ false }}"><div style="font-weight:700;font-size:.68em;letter-spacing:.09em;text-transform:uppercase;border-radius:999px;padding:5px 12px;background:rgba(247,249,255,.16);border:1px solid rgba(247,249,255,.4)">{{ memTag }}</div></sc-if>
+        </div>
+        <div style="color:{{ memHeroSub }};font-weight:600;margin-top:3px">{{ memMeta }}</div>
+      </div>
+      <sc-if value="{{ memIsKid }}" hint-placeholder-val="{{ false }}">
+        <div style="{{ memBalSt }}"><svg width="20" height="20" viewBox="0 0 24 24" fill="#7C5CE0"><path d="M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z"></path></svg>{{ memBal }}</div>
+      </sc-if>
+    </div>
+    <div style="display:grid;gap:12px;grid-template-columns:{{ todayCols }};align-items:start">
+      <div style="display:grid;gap:18px">
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:20px 22px">
+          <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0 0 12px">{{ memDayTitle }}</h2>
+          <sc-if value="{{ memAgendaEmpty }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(35,42,61,.55);font-weight:600;padding:14px 6px;text-align:center">Nothing on the calendar today.</div></sc-if>
+          <sc-for list="{{ memAgenda }}" as="ma" hint-placeholder-count="2">
+            <div onClick="{{ ma.click }}" style="{{ ma.st }}">
+              <div style="width:78px;flex-shrink:0;font-weight:700;font-size:.86em;color:rgba(35,42,61,.62)">{{ ma.time }}</div>
+              <div style="width:5px;align-self:stretch;border-radius:99px;background:{{ ma.bar }}"></div>
+              <div style="flex:1;min-width:0"><div style="font-weight:700;font-size:.98em">{{ ma.title }}</div><div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.8em;display:{{ ma.locDisp }}">{{ ma.loc }}</div></div>
+              <sc-if value="{{ ma.wxOn }}" hint-placeholder-val="{{ false }}"><div style="display:flex;align-items:center;gap:4px;color:rgba(35,42,61,.6);font-weight:700;font-size:.78em;background:rgba(35,42,61,.05);border-radius:999px;padding:4px 9px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="{{ ma.wD }}"></path></svg>{{ ma.wT }}</div></sc-if>
+            </div>
+          </sc-for>
+        </div>
+        <sc-if value="{{ pfMemOn }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#FFFFFF;border:1.5px solid rgba(61,109,232,.3);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:20px 22px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="#3D6DE8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"></path></svg>
+            <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">Morning pre-flight</h2>
+            <div style="flex:1"></div>
+            <span style="{{ pfDepSt }}"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 7.5V12l3 2"></path></svg>{{ pfDepLbl }}</span>
+          </div>
+          <sc-for list="{{ pfMemRows }}" as="pm" hint-placeholder-count="5">
+            <div onClick="{{ pm.tog }}" style="{{ pm.rowSt }}">
+              <div style="{{ pm.ckSt }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ pm.ckD }}"></path></svg></div>
+              <div style="flex:1;font-weight:700;font-size:.92em;text-decoration:{{ pm.deco }};opacity:{{ pm.op }}">{{ pm.text }}</div>
+              <span style="{{ pm.bdSt }}">{{ pm.bd }}</span>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+        <sc-if value="{{ memIsKid }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:20px 22px">
+          <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0 0 8px">Today's chores</h2>
+          <sc-if value="{{ memChoresEmpty }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(35,42,61,.55);font-weight:600;padding:12px 4px;text-align:center">No chores today — free pass!</div></sc-if>
+          <sc-for list="{{ memChoreRows }}" as="cr2" hint-placeholder-count="3">
+            <div onClick="{{ cr2.tog }}" style="display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:14px;cursor:pointer;min-height:46px" style-hover="background:rgba(35,42,61,.045)">
+              <div style="{{ cr2.ckSt }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ cr2.ckD }}"></path></svg></div>
+              <div style="flex:1;font-weight:700;font-size:.95em;text-decoration:{{ cr2.deco }};opacity:{{ cr2.op }}">{{ cr2.title }}</div>
+              <div style="font-weight:800;font-size:.78em;color:#6D4FD1">{{ cr2.starsS }}</div>
+            </div>
+          </sc-for>
+        </div>
+        </sc-if>
+      </div>
+      <div style="display:grid;gap:18px">
+        <sc-if value="{{ glOn }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:20px 22px">
+          <div style="display:flex;align-items:center;margin-bottom:8px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <div style="width:26px;height:26px;border-radius:8px;background:#18A957;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5v19M17 6.5h-7.5a3 3 0 0 0 0 6h5a3 3 0 0 1 0 6H7"></path></svg></div>
+              <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0">Greenlight</h2>
+            </div>
+            <div style="flex:1"></div>
+            <button onClick="{{ glEdit }}" style="background:none;border:none;color:#3D6DE8;font-weight:700;cursor:pointer;font-size:.85em;padding:6px">Edit</button>
+          </div>
+          <div style="display:flex;align-items:baseline;gap:8px"><div style="font-family:'Outfit';font-weight:600;font-size:2em;color:#18A957">{{ glBal }}</div><div style="font-weight:600;font-size:.82em;color:rgba(35,42,61,.55)">balance</div></div>
+          <div style="font-weight:600;font-size:.85em;color:rgba(35,42,61,.6);margin-top:2px">Allowance {{ glAllow }}/week · paid Friday</div>
+          <div style="margin-top:12px;padding:12px 14px;border:1px solid rgba(35,42,61,.09);border-radius:16px;background:rgba(24,169,87,.06)">
+            <div style="display:flex;justify-content:space-between;gap:8px;font-weight:700;font-size:.9em"><span>{{ glGoal }}</span><span style="color:#18A957;white-space:nowrap">{{ glSaved }} / {{ glCost }}</span></div>
+            <div style="height:9px;border-radius:99px;background:rgba(35,42,61,.09);margin-top:7px;overflow:hidden"><div style="height:100%;border-radius:99px;background:#18A957;transition:width .4s;width:{{ glPw }}"></div></div>
+            <div style="font-weight:600;font-size:.75em;color:rgba(35,42,61,.55);margin-top:4px">{{ glNote }}</div>
+          </div>
+          <div style="margin-top:8px">
+            <sc-for list="{{ glPays }}" as="gp" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 2px;border-bottom:1px solid rgba(35,42,61,.06)">
+                <div style="width:34px;font-weight:700;font-size:.72em;color:rgba(35,42,61,.5)">{{ gp.d }}</div>
+                <div style="flex:1;font-weight:700;font-size:.88em">{{ gp.for }}</div>
+                <div style="font-weight:800;font-size:.88em;color:#18A957">{{ gp.amt }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ glConnect }}" style="margin-top:12px;width:100%;border:1.5px dashed rgba(35,42,61,.25);background:none;border-radius:14px;padding:10px;font-weight:700;cursor:pointer;color:rgba(35,42,61,.6);font-size:.85em">Connect Greenlight → <span style="font-weight:600;opacity:.7">sample for now</span></button>
+        </div>
+        </sc-if>
+        <sc-if value="{{ memIsKid }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:20px 22px">
+          <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0 0 6px">Reward goals</h2>
+          <sc-for list="{{ memRewards }}" as="mr" hint-placeholder-count="3">
+            <div onClick="{{ mr.click }}" style="padding:9px 4px;border-bottom:1px solid rgba(35,42,61,.07);cursor:pointer">
+              <div style="display:flex;justify-content:space-between;font-weight:700;font-size:.92em"><span>{{ mr.title }}</span><span style="color:#6D4FD1">{{ mr.cost }} ★</span></div>
+              <div style="height:8px;border-radius:99px;background:rgba(35,42,61,.08);margin-top:6px;overflow:hidden"><div style="height:100%;border-radius:99px;background:#7C5CE0;transition:width .4s;width:{{ mr.pw }}"></div></div>
+              <div style="font-weight:600;font-size:.75em;color:rgba(35,42,61,.55);margin-top:3px">{{ mr.note }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:20px 22px">
+          <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0 0 10px">Stars this week</h2>
+          <div style="display:flex;gap:8px;align-items:flex-end;height:84px;padding-top:6px">
+            <sc-for list="{{ memWeek }}" as="mw" hint-placeholder-count="7">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;justify-content:flex-end">
+                <div style="font-weight:700;font-size:.66em;color:rgba(35,42,61,.55)">{{ mw.t }}</div>
+                <div style="width:100%;max-width:26px;border-radius:8px 8px 4px 4px;background:{{ mw.c }};height:{{ mw.h }}px;opacity:{{ mw.op }}"></div>
+                <div style="font-weight:700;font-size:.68em;color:{{ mw.lc }}">{{ mw.l }}</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        </sc-if>
+        <sc-if value="{{ fitOn }}" hint-placeholder-val="{{ false }}">
+        <div style="background:linear-gradient(135deg,#171B26,#232A3D);border-radius:22px;box-shadow:0 10px 26px -18px rgba(35,42,61,.55);padding:20px 22px;color:#F7F9FF">
+          <div style="display:flex;align-items:center;margin-bottom:14px">
+            <div>
+              <div style="font-weight:700;font-size:.68em;letter-spacing:.16em;color:{{ fitAcc }}">{{ fitBrand }}</div>
+              <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:2px 0 0">{{ fitTitle }}</h2>
+            </div>
+            <div style="flex:1"></div>
+            <button onClick="{{ fitEdit }}" style="background:none;border:none;color:rgba(247,249,255,.65);font-weight:700;cursor:pointer;font-size:.85em;padding:6px">Edit</button>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <sc-for list="{{ fitStats }}" as="fs" hint-placeholder-count="2">
+              <div style="background:rgba(247,249,255,.07);border:1px solid rgba(247,249,255,.12);border-radius:16px;padding:12px 14px">
+                <div style="font-weight:700;font-size:.68em;letter-spacing:.07em;color:rgba(247,249,255,.6)">{{ fs.lbl }}</div>
+                <div style="font-family:'Outfit';font-weight:600;font-size:1.55em;margin-top:2px;color:{{ fs.c }}">{{ fs.val }}</div>
+                <div style="height:7px;border-radius:99px;background:rgba(247,249,255,.12);margin-top:8px;overflow:hidden"><div style="height:100%;border-radius:99px;transition:width .4s;background:{{ fs.c }};width:{{ fs.w }}"></div></div>
+                <div style="font-weight:600;font-size:.72em;color:rgba(247,249,255,.55);margin-top:5px">{{ fs.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ fitConnect }}" style="margin-top:14px;width:100%;border:1.5px dashed rgba(247,249,255,.35);background:none;border-radius:14px;padding:11px;font-weight:700;cursor:pointer;color:rgba(247,249,255,.75);font-size:.85em">Connect {{ fitBrand }} → <span style="font-weight:600;opacity:.65">sample for now</span></button>
+        </div>
+        </sc-if>
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:20px 22px">
+          <h2 style="font-family:'Outfit';font-weight:600;font-size:1.18em;margin:0 0 10px">Counting down</h2>
+          <sc-if value="{{ memCdsEmpty }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(35,42,61,.55);font-weight:600;padding:10px 4px;text-align:center">No countdowns yet.</div></sc-if>
+          <sc-for list="{{ memCds }}" as="cm2" hint-placeholder-count="2">
+            <div style="display:flex;align-items:center;gap:10px;padding:5px 0">
+              <div style="min-width:52px;text-align:center;font-family:'Outfit';font-weight:600;border-radius:12px;padding:5px 7px;color:#F7F9FF;background:{{ cm2.c }}"><div style="font-size:1.2em;line-height:1">{{ cm2.days }}</div><div style="font-size:.55em;font-weight:600;opacity:.9">DAYS</div></div>
+              <div><div style="font-weight:700;font-size:.95em">{{ cm2.title }}</div><div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.78em">{{ cm2.dateS }}</div></div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgCal }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Calendar" style="animation:fadeUp .35s ease both">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="display:flex;background:rgba(35,42,61,.07);border-radius:999px;padding:4px">
+        <button onClick="{{ onCalWeek }}" style="{{ calWeekSt }}">Week</button>
+        <button onClick="{{ onCalMonth }}" style="{{ calMonthSt }}">Month</button>
+      </div>
+      <button onClick="{{ onPrev }}" style="width:40px;height:40px;border-radius:50%;border:1px solid rgba(35,42,61,.15);background:#FFFFFF;cursor:pointer;font-weight:800;color:#232A3D">‹</button>
+      <button onClick="{{ onToday0 }}" style="border:1px solid rgba(35,42,61,.15);background:#FFFFFF;border-radius:999px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:.85em;color:#232A3D">Today</button>
+      <button onClick="{{ onNext }}" style="width:40px;height:40px;border-radius:50%;border:1px solid rgba(35,42,61,.15);background:#FFFFFF;cursor:pointer;font-weight:800;color:#232A3D">›</button>
+      <div style="font-family:'Outfit';font-weight:600;font-size:1.25em;margin-left:4px">{{ calLabel }}</div>
+      <div style="flex:1"></div>
+      <sc-for list="{{ fChips }}" as="fc" hint-placeholder-count="5">
+        <button onClick="{{ fc.tog }}" style="{{ fc.st }}"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:{{ fc.c }}"></span>{{ fc.label }}</button>
+      </sc-for>
+      <button onClick="{{ onAddEvent }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:11px 18px;font-weight:700;cursor:pointer;font-size:.9em;min-height:44px">+ Add event</button>
+    </div>
+    <sc-if value="{{ isWeek }}" hint-placeholder-val="{{ true }}">
+      <div style="display:grid;grid-template-columns:repeat(7,minmax(148px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px">
+        <sc-for list="{{ weekDays }}" as="wd" hint-placeholder-count="7">
+          <div style="{{ wd.colSt }}">
+            <div style="display:flex;align-items:baseline;gap:6px;padding:10px 12px 6px">
+              <span style="font-weight:700;font-size:.78em;color:rgba(35,42,61,.55)">{{ wd.head }}</span>
+              <span style="{{ wd.numSt }}">{{ wd.num }}</span>
+              <span style="flex:1"></span>
+              <span style="font-weight:700;font-size:.72em;color:rgba(35,42,61,.45)">{{ wd.hiLo }}</span>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:7px;padding:0 9px 10px;min-height:130px">
+              <sc-for list="{{ wd.evs }}" as="we" hint-placeholder-count="2">
+                <div onClick="{{ we.click }}" style="{{ we.st }}">
+                  <div style="display:flex;align-items:center;gap:5px;font-weight:700;font-size:.72em;color:rgba(35,42,61,.6)"><span>{{ we.timeS }}</span><span style="flex:1"></span>
+                    <sc-for list="{{ we.dots }}" as="dt2" hint-placeholder-count="1"><span style="width:9px;height:9px;border-radius:50%;display:inline-block;background:{{ dt2.c }}"></span></sc-for>
+                  </div>
+                  <div style="font-weight:700;font-size:.86em;line-height:1.25;margin-top:2px">{{ we.title }}</div>
+                  <div style="font-weight:600;font-size:.72em;color:rgba(35,42,61,.5);display:{{ we.locDisp }}">{{ we.loc }}</div>
+                  <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:3px"><sc-for list="{{ we.rides }}" as="wer" hint-placeholder-count="1"><div style="{{ wer.st }}"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="{{ wer.d }}"></path></svg>{{ wer.t }}</div></sc-for></div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="border-top:1px dashed rgba(35,42,61,.14);padding:7px 12px;font-weight:700;font-size:.74em;color:#1F8A5B;display:{{ wd.mealDisp }}">{{ wd.mealLine }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+    <sc-if value="{{ isMonth }}" hint-placeholder-val="{{ false }}">
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px">
+        <sc-for list="{{ mh }}" as="mhd" hint-placeholder-count="7"><div style="text-align:center;font-weight:700;font-size:.78em;color:rgba(35,42,61,.5);padding:4px">{{ mhd.l }}</div></sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px">
+        <sc-for list="{{ monthCells }}" as="mc" hint-placeholder-count="7">
+          <div onClick="{{ mc.click }}" style="{{ mc.st }}">
+            <div style="{{ mc.numSt }}">{{ mc.num }}</div>
+            <sc-for list="{{ mc.chips }}" as="ch2" hint-placeholder-count="0"><div style="{{ ch2.st }}">{{ ch2.t }}</div></sc-for>
+            <div style="font-weight:700;font-size:.68em;color:rgba(35,42,61,.5);display:{{ mc.moreDisp }}">{{ mc.more }}</div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgChores }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Chores" style="animation:fadeUp .35s ease both">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px">
+      <sc-for list="{{ kidCols }}" as="kc" hint-placeholder-count="3">
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;box-shadow:0 8px 24px -18px rgba(35,42,61,.3);padding:18px">
+          <div onClick="{{ kc.go }}" style="display:flex;align-items:center;gap:12px;margin-bottom:10px;cursor:pointer">
+            <div style="position:relative;width:64px;height:64px;flex-shrink:0">
+              <svg width="64" height="64" viewBox="0 0 64 64">
+                <circle cx="32" cy="32" r="26" fill="none" stroke="rgba(35,42,61,.1)" stroke-width="7"></circle>
+                <circle cx="32" cy="32" r="26" fill="none" stroke-width="7" stroke-linecap="round" transform="rotate(-90 32 32)" stroke="{{ kc.c }}" stroke-dasharray="{{ kc.ring }}"></circle>
+              </svg>
+              <div style="{{ kc.avSt }}">{{ kc.init }}</div>
+            </div>
+            <div style="flex:1"><div style="font-family:'Outfit';font-weight:600;font-size:1.2em">{{ kc.name }}</div><div style="color:rgba(35,42,61,.55);font-weight:700;font-size:.8em">{{ kc.meta }}</div></div>
+            <div style="display:flex;align-items:center;gap:5px;font-weight:800;font-size:1em;color:#6D4FD1;background:rgba(124,92,224,.14);border-radius:999px;padding:7px 13px"><svg width="16" height="16" viewBox="0 0 24 24" fill="#7C5CE0"><path d="M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z"></path></svg>{{ kc.bal }}</div>
+          </div>
+          <sc-for list="{{ kc.rows }}" as="cr" hint-placeholder-count="4">
+            <div onClick="{{ cr.tog }}" style="display:flex;align-items:center;gap:11px;padding:9px 8px;border-radius:14px;cursor:pointer;min-height:46px" style-hover="background:rgba(35,42,61,.045)">
+              <div style="{{ cr.ckSt }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ cr.ckD }}"></path></svg></div>
+              <div style="flex:1;font-weight:700;font-size:.95em;transition:opacity .2s;text-decoration:{{ cr.deco }};opacity:{{ cr.op }}">{{ cr.title }}</div>
+              <div style="font-weight:800;font-size:.78em;color:#6D4FD1">{{ cr.starsS }}</div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:26px 0 12px">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.25em;margin:0">Reward shop</h2>
+      <div style="flex:1"></div>
+      <button onClick="{{ onManage }}" style="border:1px solid rgba(35,42,61,.16);background:#FFFFFF;border-radius:999px;padding:9px 16px;font-weight:700;cursor:pointer;font-size:.85em;color:#232A3D">{{ manageLbl }}</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
+      <sc-for list="{{ rewards }}" as="rw" hint-placeholder-count="4">
+        <button onClick="{{ rw.click }}" style="text-align:left;background:#FFFFFF;border:1.5px solid rgba(124,92,224,.4);border-radius:18px;padding:14px 16px;cursor:pointer;min-height:44px" style-hover="border-color:#7C5CE0;box-shadow:0 8px 20px -14px rgba(124,92,224,.7)">
+          <div style="font-weight:700;font-size:.95em;color:#232A3D">{{ rw.title }}</div>
+          <div style="display:flex;align-items:center;gap:4px;margin-top:6px;font-weight:800;color:#6D4FD1;font-size:.9em"><svg width="14" height="14" viewBox="0 0 24 24" fill="#7C5CE0"><path d="M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z"></path></svg>{{ rw.cost }} · tap to redeem</div>
+        </button>
+      </sc-for>
+    </div>
+    <sc-if value="{{ mng }}" hint-placeholder-val="{{ false }}">
+      <div style="margin-top:22px;background:rgba(35,42,61,.04);border:1.5px dashed rgba(35,42,61,.2);border-radius:20px;padding:16px 18px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <h3 style="font-family:'Outfit';font-weight:600;font-size:1.05em;margin:0">Manage chores & rewards</h3>
+          <div style="flex:1"></div>
+          <button onClick="{{ onNewChore }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.82em">+ Chore</button>
+          <button onClick="{{ onNewReward }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.82em">+ Reward</button>
+        </div>
+        <sc-for list="{{ mngChores }}" as="mc2" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 4px;border-bottom:1px solid rgba(35,42,61,.08)">
+            <div style="flex:1;font-weight:700;font-size:.9em">{{ mc2.title }}<span style="color:rgba(35,42,61,.5);font-weight:600;font-size:.85em"> — {{ mc2.meta }}</span></div>
+            <button onClick="{{ mc2.edit }}" style="border:none;background:rgba(35,42,61,.07);border-radius:10px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:.8em;color:#232A3D">Edit</button>
+            <button onClick="{{ mc2.del }}" style="border:none;background:rgba(217,91,67,.12);color:#B23B22;border-radius:10px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:.8em">Delete</button>
+          </div>
+        </sc-for>
+        <div style="margin-top:10px;color:rgba(35,42,61,.55);font-weight:600;font-size:.85em;display:{{ recentDisp }}">Recent redemptions: {{ recentRd }}</div>
+      </div>
+    </sc-if>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgMeals }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Meals" style="animation:fadeUp .35s ease both">
+    <div style="display:grid;grid-template-columns:repeat(7,minmax(140px,1fr));gap:10px;overflow-x:auto;padding-bottom:6px">
+      <sc-for list="{{ mealDays }}" as="md" hint-placeholder-count="7">
+        <button onClick="{{ md.pick }}" style="{{ md.st }}">
+          <div style="font-weight:700;font-size:.78em;color:rgba(35,42,61,.55)">{{ md.dow }} <span style="color:rgba(35,42,61,.85)">{{ md.num }}</span></div>
+          <div style="{{ md.nameSt }}">{{ md.name }}</div>
+        </button>
+      </sc-for>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin:24px 0 12px">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.25em;margin:0">Family favorites</h2>
+      <div style="flex:1"></div>
+      <input value="{{ favN }}" onChange="{{ onFavN }}" placeholder="Add a favorite meal…" style="background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:999px;padding:10px 16px;font-size:.9em;font-weight:600;color:#232A3D;outline-color:#7C5CE0;width:220px">
+      <button onClick="{{ addFav }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer;font-size:.85em">Add</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+      <sc-for list="{{ favs }}" as="fv" hint-placeholder-count="6">
+        <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:18px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+          <div style="font-weight:700;font-size:.95em">{{ fv.name }}</div>
+          <div style="align-self:flex-start;font-weight:700;font-size:.72em;color:#3D6DE8;background:rgba(61,109,232,.1);border-radius:999px;padding:3px 10px;display:{{ fv.tagDisp }}">{{ fv.tag }}</div>
+          <div style="display:flex;gap:8px;margin-top:2px">
+            <button onClick="{{ fv.plan }}" style="flex:1;border:1px solid rgba(35,42,61,.16);background:#F7F9FF;border-radius:999px;padding:8px 10px;font-weight:700;cursor:pointer;font-size:.8em;color:#232A3D">Plan a night</button>
+            <button onClick="{{ fv.del }}" style="border:none;background:rgba(217,91,67,.1);color:#B23B22;border-radius:999px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:.8em">✕</button>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgLists }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Lists" style="animation:fadeUp .35s ease both;display:grid;grid-template-columns:{{ listCols }};gap:18px;align-items:start">
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:20px;padding:14px">
+      <sc-for list="{{ listTabs }}" as="lt" hint-placeholder-count="3">
+        <button onClick="{{ lt.sel }}" style="{{ lt.st }}">{{ lt.name }}<span style="float:right;opacity:.6">{{ lt.count }}</span></button>
+      </sc-for>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input value="{{ nl }}" onChange="{{ onNl }}" placeholder="New list…" style="flex:1;min-width:0;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:12px;padding:9px 12px;font-size:.88em;font-weight:600;color:#232A3D;outline-color:#7C5CE0">
+        <button onClick="{{ addList }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:12px;padding:9px 13px;font-weight:700;cursor:pointer">+</button>
+      </div>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:20px;padding:18px 20px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+        <h2 style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin:0">{{ curName }}</h2>
+        <div style="flex:1"></div>
+        <button onClick="{{ clearDone }}" style="border:1px solid rgba(35,42,61,.16);background:#F7F9FF;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8em;color:#232A3D">Clear checked</button>
+        <button onClick="{{ delList }}" style="border:none;background:rgba(217,91,67,.1);color:#B23B22;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8em">Delete list</button>
+      </div>
+      <sc-if value="{{ itemsEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="color:rgba(35,42,61,.55);font-weight:600;padding:18px 4px;text-align:center">Nothing here yet — add the first item below.</div>
+      </sc-if>
+      <sc-for list="{{ items }}" as="it" hint-placeholder-count="5">
+        <div style="display:flex;align-items:center;gap:11px;padding:8px 4px;border-bottom:1px solid rgba(35,42,61,.07);min-height:46px">
+          <div onClick="{{ it.tog }}" style="{{ it.ckSt }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ it.ckD }}"></path></svg></div>
+          <div onClick="{{ it.tog }}" style="flex:1;font-weight:700;font-size:.95em;cursor:pointer;text-decoration:{{ it.deco }};opacity:{{ it.op }}">{{ it.text }}</div>
+          <div style="width:11px;height:11px;border-radius:50%;background:{{ it.by }}"></div>
+          <button onClick="{{ it.del }}" style="border:none;background:none;color:rgba(35,42,61,.4);font-weight:800;cursor:pointer;font-size:1em;padding:6px" style-hover="color:#B23B22">✕</button>
+        </div>
+      </sc-for>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <input value="{{ ni }}" onChange="{{ onNi }}" onKeyDown="{{ onNiKey }}" placeholder="Add an item… (Enter)" style="flex:1;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:999px;padding:11px 16px;font-size:.92em;font-weight:600;color:#232A3D;outline-color:#7C5CE0">
+        <button onClick="{{ addItem }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:11px 20px;font-weight:700;cursor:pointer">Add</button>
+      </div>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgCds }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Countdowns" style="animation:fadeUp .35s ease both">
+    <div style="display:flex;margin-bottom:14px"><div style="flex:1"></div><button onClick="{{ onNewCd }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:11px 18px;font-weight:700;cursor:pointer;font-size:.9em">+ New countdown</button></div>
+    <sc-if value="{{ cdsEmpty }}" hint-placeholder-val="{{ false }}">
+      <div style="color:rgba(35,42,61,.55);font-weight:600;padding:30px;text-align:center">No countdowns yet — what's the next big day?</div>
+    </sc-if>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px">
+      <sc-for list="{{ cds }}" as="cd" hint-placeholder-count="4">
+        <button onClick="{{ cd.edit }}" style="{{ cd.st }}">
+          <div style="font-family:'Outfit';font-weight:600;font-size:2.6em;line-height:1;color:{{ cd.c }}">{{ cd.days }}</div>
+          <div style="font-weight:700;font-size:.8em;color:rgba(35,42,61,.5);letter-spacing:.12em;margin-top:2px">{{ cd.unit }}</div>
+          <div style="font-weight:700;font-size:1.02em;margin-top:8px;color:#232A3D">{{ cd.title }}</div>
+          <div style="font-weight:600;font-size:.8em;color:rgba(35,42,61,.55);margin-top:2px">{{ cd.dateS }}</div>
+        </button>
+      </sc-for>
+    </div>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgSk }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Sidekick" style="animation:fadeUp .35s ease both;max-width:860px">
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;padding:20px 22px">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#1F8A5B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4l1.5 4.5L18 10l-4.5 1.5L12 16l-1.5-4.5L6 10l4.5-1.5zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"></path></svg>
+        <h2 style="font-family:'Outfit';font-weight:600;font-size:1.25em;margin:0">Sidekick</h2>
+        <div style="flex:1"></div>
+        <button onClick="{{ skSample }}" style="border:1px solid rgba(35,42,61,.16);background:#F7F9FF;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8em;color:#232A3D">Try a sample</button>
+      </div>
+      <div style="color:rgba(35,42,61,.6);font-weight:600;font-size:.9em;margin-bottom:12px">Paste a school email, camp schedule, or team text — Sidekick turns it into events and list items you can approve.</div>
+      <textarea value="{{ skIn }}" onChange="{{ onSkIn }}" rows="7" placeholder="Paste anything here…" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:16px;padding:14px 16px;font-size:.95em;font-weight:600;color:#232A3D;outline-color:#7C5CE0;resize:vertical;line-height:1.5"></textarea>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px">
+        <button onClick="{{ skGo }}" style="{{ skGoSt }}">Read it ✦</button>
+        <sc-if value="{{ skBusy }}" hint-placeholder-val="{{ false }}"><div style="width:20px;height:20px;border-radius:50%;border:3px solid rgba(35,42,61,.15);border-top-color:#1F8A5B;animation:spin .8s linear infinite"></div><span style="font-weight:600;color:rgba(35,42,61,.6);font-size:.9em">Reading…</span></sc-if>
+        <sc-if value="{{ skErrOn }}" hint-placeholder-val="{{ false }}"><span style="font-weight:600;color:#B23B22;font-size:.9em">{{ skErr }}</span></sc-if>
+      </div>
+    </div>
+    <sc-if value="{{ skOut }}" hint-placeholder-val="{{ false }}">
+      <div style="background:#FFFFFF;border:1.5px solid rgba(124,92,224,.5);border-radius:22px;padding:20px 22px;margin-top:16px;animation:fadeUp .3s ease both">
+        <h3 style="font-family:'Outfit';font-weight:600;font-size:1.1em;margin:0 0 10px">Here's what I found — uncheck anything you don't want:</h3>
+        <sc-for list="{{ skEvs }}" as="se" hint-placeholder-count="2">
+          <div onClick="{{ se.tog }}" style="display:flex;align-items:center;gap:11px;padding:9px 6px;border-bottom:1px solid rgba(35,42,61,.07);cursor:pointer">
+            <div style="{{ se.ckSt }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ se.ckD }}"></path></svg></div>
+            <div style="flex:1"><div style="font-weight:700;font-size:.95em">{{ se.title }}</div><div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.8em">{{ se.meta }}</div></div>
+            <span style="font-weight:700;font-size:.72em;color:#3D6DE8;background:rgba(61,109,232,.1);border-radius:999px;padding:3px 10px">event</span>
+          </div>
+        </sc-for>
+        <sc-for list="{{ skItems }}" as="si" hint-placeholder-count="2">
+          <div onClick="{{ si.tog }}" style="display:flex;align-items:center;gap:11px;padding:9px 6px;border-bottom:1px solid rgba(35,42,61,.07);cursor:pointer">
+            <div style="{{ si.ckSt }}"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="{{ si.ckD }}"></path></svg></div>
+            <div style="flex:1"><div style="font-weight:700;font-size:.95em">{{ si.text }}</div><div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.8em">{{ si.meta }}</div></div>
+            <span style="font-weight:700;font-size:.72em;color:#7A4DBB;background:rgba(138,99,201,.12);border-radius:999px;padding:3px 10px">list item</span>
+          </div>
+        </sc-for>
+        <div style="display:flex;gap:10px;margin-top:14px">
+          <button onClick="{{ skAdd }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:12px 22px;font-weight:700;cursor:pointer;font-size:.95em">{{ skAddLbl }}</button>
+          <button onClick="{{ skClear }}" style="border:1px solid rgba(35,42,61,.16);background:#F7F9FF;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer;font-size:.9em;color:#232A3D">Discard</button>
+        </div>
+      </div>
+    </sc-if>
+  </section>
+  </sc-if>
+
+  <sc-if value="{{ pgSet }}" hint-placeholder-val="{{ false }}">
+  <section data-screen-label="Settings" style="animation:fadeUp .35s ease both;max-width:900px;display:grid;gap:16px">
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;padding:20px 22px">
+      <div style="display:flex;align-items:center;margin-bottom:10px"><h2 style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin:0">Family</h2><div style="flex:1"></div><button onClick="{{ addMember }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:9px 15px;font-weight:700;cursor:pointer;font-size:.82em">+ Member</button></div>
+      <sc-for list="{{ stMembers }}" as="sm" hint-placeholder-count="4">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(35,42,61,.07);flex-wrap:wrap">
+          <div style="width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:'Outfit';font-weight:600;background:{{ sm.c }}">{{ sm.init }}</div>
+          <input value="{{ sm.name }}" onChange="{{ sm.onName }}" style="flex:1;min-width:130px;background:#FFF;border:1.5px solid rgba(35,42,61,.14);border-radius:10px;padding:8px 11px;font-weight:700;font-size:.9em;color:#232A3D;outline-color:#7C5CE0">
+          <button onClick="{{ sm.roleTog }}" style="border:1px solid rgba(35,42,61,.16);background:#F7F9FF;border-radius:999px;padding:8px 13px;font-weight:700;cursor:pointer;font-size:.78em;color:#232A3D">{{ sm.roleLbl }}</button>
+          <div style="display:flex;gap:5px">
+            <sc-for list="{{ sm.sw }}" as="sw" hint-placeholder-count="6"><button onClick="{{ sw.pick }}" style="{{ sw.st }}"></button></sc-for>
+          </div>
+          <button onClick="{{ sm.del }}" style="border:none;background:rgba(217,91,67,.1);color:#B23B22;border-radius:10px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:.8em">Remove</button>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;padding:20px 22px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <h2 style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin:0">School pre-flight</h2>
+        <div style="flex:1"></div>
+        <button onClick="{{ pfOpenTog }}" style="{{ pfOpenSt }}">{{ pfOpenLbl }}</button>
+      </div>
+      <div style="color:rgba(35,42,61,.58);font-weight:600;font-size:.85em;margin:4px 0 6px">Shows every school morning, Monday–Friday. Set gym-uniform days, packed-lunch days, and bring-along items for each kid.</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:6px 0 2px">
+        <div style="font-weight:700;font-size:.9em">Departure time</div>
+        <input type="time" value="{{ pfDepVal }}" onChange="{{ pfDepSet }}" style="border:1.5px solid rgba(35,42,61,.16);border-radius:10px;padding:7px 10px;font:inherit;font-weight:700;color:#232A3D;background:#FCFCFE"></input>
+        <div style="font-weight:600;font-size:.78em;color:rgba(35,42,61,.5)">Shown on the pre-flight card</div>
+      </div>
+      <sc-for list="{{ pfKidsCfg }}" as="pc" hint-placeholder-count="3">
+        <div style="border-top:1px solid rgba(35,42,61,.08);padding:12px 0 4px;margin-top:8px">
+          <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+            <div style="width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:'Outfit';font-weight:600;font-size:.9em;background:{{ pc.c }}">{{ pc.init }}</div>
+            <div style="font-weight:700">{{ pc.name }}</div>
+          </div>
+          <div style="display:flex;gap:26px;flex-wrap:wrap">
+            <div><div style="font-weight:700;font-size:.72em;letter-spacing:.07em;color:rgba(35,42,61,.5);margin-bottom:5px">GYM UNIFORM DAYS</div><div style="display:flex;gap:5px"><sc-for list="{{ pc.gym }}" as="pg" hint-placeholder-count="5"><button onClick="{{ pg.tog }}" style="{{ pg.st }}">{{ pg.l }}</button></sc-for></div></div>
+            <div><div style="font-weight:700;font-size:.72em;letter-spacing:.07em;color:rgba(35,42,61,.5);margin-bottom:5px">PACK LUNCH DAYS</div><div style="display:flex;gap:5px"><sc-for list="{{ pc.lun }}" as="pl" hint-placeholder-count="5"><button onClick="{{ pl.tog }}" style="{{ pl.st }}">{{ pl.l }}</button></sc-for></div></div>
+          </div>
+          <div style="margin-top:11px">
+            <div style="font-weight:700;font-size:.72em;letter-spacing:.07em;color:rgba(35,42,61,.5);margin-bottom:5px">BRING ALONG</div>
+            <sc-for list="{{ pc.items }}" as="pi" hint-placeholder-count="2">
+              <div style="display:flex;align-items:center;gap:9px;padding:5px 0;flex-wrap:wrap">
+                <div style="font-weight:700;font-size:.88em;min-width:130px">{{ pi.text }}</div>
+                <div style="display:flex;gap:4px"><sc-for list="{{ pi.days }}" as="pd2" hint-placeholder-count="5"><button onClick="{{ pd2.tog }}" style="{{ pd2.st }}">{{ pd2.l }}</button></sc-for></div>
+                <button onClick="{{ pi.del }}" style="border:none;background:rgba(217,91,67,.1);color:#B23B22;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer;font-size:.75em">✕</button>
+              </div>
+            </sc-for>
+            <div style="display:flex;gap:7px;margin-top:5px">
+              <input value="{{ pc.nb }}" onChange="{{ pc.onNb }}" placeholder="e.g. Library book" style="flex:1;max-width:260px;background:#FFF;border:1.5px solid rgba(35,42,61,.14);border-radius:10px;padding:8px 11px;font-weight:700;font-size:.85em;color:#232A3D;outline-color:#7C5CE0">
+              <button onClick="{{ pc.addB }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:10px;padding:8px 13px;font-weight:700;cursor:pointer;font-size:.8em">Add</button>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;padding:20px 22px">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin:0 0 10px">Weather location</h2>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <input value="{{ zip }}" onChange="{{ onZip }}" placeholder="ZIP or city" style="background:#FFF;border:1.5px solid rgba(35,42,61,.14);border-radius:12px;padding:10px 13px;font-weight:700;font-size:.92em;color:#232A3D;outline-color:#7C5CE0;width:160px">
+        <button onClick="{{ zipGo }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:.85em">Update</button>
+        <span style="font-weight:600;color:rgba(35,42,61,.6);font-size:.9em">{{ zipMsg }}</span>
+      </div>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;padding:20px 22px">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin:0 0 4px">Calendar feeds</h2>
+      <div style="color:rgba(35,42,61,.58);font-weight:600;font-size:.85em;margin-bottom:12px">Read-only ICS links (Google, Apple, Outlook, school). Some feeds block browser fetches — those sync via the home server instead.</div>
+      <sc-for list="{{ feeds }}" as="fe" hint-placeholder-count="1">
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(35,42,61,.07);flex-wrap:wrap">
+          <span style="width:12px;height:12px;border-radius:50%;background:{{ fe.color }}"></span>
+          <div style="flex:1;min-width:150px"><div style="font-weight:700;font-size:.92em">{{ fe.name }}</div><div style="color:rgba(35,42,61,.5);font-weight:600;font-size:.78em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:420px">{{ fe.url }}</div></div>
+          <span style="font-weight:600;font-size:.78em;color:rgba(35,42,61,.55)">{{ fe.status }}</span>
+          <button onClick="{{ fe.sync }}" style="border:1px solid rgba(35,42,61,.16);background:#F7F9FF;border-radius:999px;padding:8px 14px;font-weight:700;cursor:pointer;font-size:.8em;color:#232A3D">Sync</button>
+          <button onClick="{{ fe.del }}" style="border:none;background:rgba(217,91,67,.1);color:#B23B22;border-radius:999px;padding:8px 12px;font-weight:700;cursor:pointer;font-size:.8em">✕</button>
+        </div>
+      </sc-for>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <input value="{{ nfName }}" onChange="{{ onNfName }}" placeholder="Feed name" style="background:#FFF;border:1.5px solid rgba(35,42,61,.14);border-radius:12px;padding:10px 13px;font-weight:700;font-size:.88em;color:#232A3D;outline-color:#7C5CE0;width:170px">
+        <input value="{{ nfUrl }}" onChange="{{ onNfUrl }}" placeholder="https://…/calendar.ics" style="flex:1;min-width:220px;background:#FFF;border:1.5px solid rgba(35,42,61,.14);border-radius:12px;padding:10px 13px;font-weight:600;font-size:.88em;color:#232A3D;outline-color:#7C5CE0">
+        <button onClick="{{ addFeed }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:.85em">Add feed</button>
+      </div>
+    </div>
+    <div style="background:#FFFFFF;border:1px solid rgba(35,42,61,.1);border-radius:22px;padding:20px 22px;display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:200px"><h2 style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin:0">Parent PIN</h2><div style="color:rgba(35,42,61,.58);font-weight:600;font-size:.85em">Guards settings, redemptions, edits & deletes.</div></div>
+      <input value="{{ pinN }}" onChange="{{ onPinN }}" placeholder="New 4-digit PIN" maxLength="4" style="background:#FFF;border:1.5px solid rgba(35,42,61,.14);border-radius:12px;padding:10px 13px;font-weight:700;font-size:.92em;color:#232A3D;outline-color:#7C5CE0;width:150px">
+      <button onClick="{{ savePin }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:.85em">Save PIN</button>
+      <button onClick="{{ resetAll }}" style="border:1.5px solid rgba(217,91,67,.4);background:none;color:#B23B22;border-radius:999px;padding:10px 18px;font-weight:700;cursor:pointer;font-size:.85em">Reset demo data</button>
+    </div>
+  </section>
+  </sc-if>
+
+  </div>
+</main>
+
+<sc-if value="{{ evOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ evClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:480px;max-width:100%;max-height:92vh;overflow:auto;animation:fadeUp .25s ease both;box-shadow:0 30px 70px -30px rgba(20,25,43,.6)" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.3em;margin:0 0 14px">{{ evHead }}</h2>
+      <input value="{{ evT }}" onChange="{{ onEvT }}" placeholder="What's happening?" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:12px 14px;font-weight:700;font-size:1em;color:#232A3D;outline-color:#7C5CE0;margin-bottom:10px">
+      <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+        <input type="date" value="{{ evDate }}" onChange="{{ onEvDate }}" style="flex:1;min-width:140px;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:11px 12px;font-weight:600;font-size:.9em;color:#232A3D;outline-color:#7C5CE0">
+        <input type="time" value="{{ evStart }}" onChange="{{ onEvStart }}" style="background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:11px 12px;font-weight:600;font-size:.9em;color:#232A3D;outline-color:#7C5CE0">
+        <input value="{{ evDur }}" onChange="{{ onEvDur }}" placeholder="Min" title="Duration (minutes)" style="width:74px;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:11px 12px;font-weight:600;font-size:.9em;color:#232A3D;outline-color:#7C5CE0">
+      </div>
+      <input value="{{ evLoc }}" onChange="{{ onEvLoc }}" placeholder="Location (optional)" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:11px 14px;font-weight:600;font-size:.9em;color:#232A3D;outline-color:#7C5CE0;margin-bottom:12px">
+      <div style="font-weight:700;font-size:.85em;color:rgba(35,42,61,.6);margin-bottom:6px">Who's it for?</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+        <sc-for list="{{ evMems }}" as="em" hint-placeholder-count="5">
+          <button onClick="{{ em.tog }}" style="{{ em.st }}"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:{{ em.c }}"></span>{{ em.label }}</button>
+        </sc-for>
+      </div>
+      <div style="font-weight:700;font-size:.85em;color:rgba(35,42,61,.6);margin-bottom:6px">Rides</div>
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="width:62px;font-weight:700;font-size:.8em;color:rgba(35,42,61,.75)">Drop-off</span>
+        <sc-for list="{{ evDrop }}" as="rc" hint-placeholder-count="3"><button onClick="{{ rc.tog }}" style="{{ rc.st }}">{{ rc.label }}</button></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+        <span style="width:62px;font-weight:700;font-size:.8em;color:rgba(35,42,61,.75)">Pick-up</span>
+        <sc-for list="{{ evPick }}" as="rc2" hint-placeholder-count="3"><button onClick="{{ rc2.tog }}" style="{{ rc2.st }}">{{ rc2.label }}</button></sc-for>
+      </div>
+      <button onClick="{{ onEvRec }}" style="{{ evRecSt }}">Repeats weekly</button>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button onClick="{{ evSave }}" style="flex:1;background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:13px;font-weight:700;cursor:pointer;font-size:1em">Save</button>
+        <button onClick="{{ evDel }}" style="display:{{ evDelSt }};border:none;background:rgba(217,91,67,.12);color:#B23B22;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer">Delete</button>
+        <button onClick="{{ evClose }}" style="border:1px solid rgba(35,42,61,.16);background:none;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer;color:#232A3D">Cancel</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ ddOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ ddClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:460px;max-width:100%;max-height:92vh;overflow:auto;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <div style="display:flex;align-items:center;margin-bottom:12px"><h2 style="font-family:'Outfit';font-weight:600;font-size:1.25em;margin:0">{{ ddTitle }}</h2><div style="flex:1"></div><button onClick="{{ ddAdd }}" style="background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:9px 15px;font-weight:700;cursor:pointer;font-size:.82em">+ Add</button></div>
+      <sc-if value="{{ ddEmpty }}" hint-placeholder-val="{{ false }}"><div style="color:rgba(35,42,61,.55);font-weight:600;padding:14px;text-align:center">Nothing planned.</div></sc-if>
+      <sc-for list="{{ ddEvs }}" as="de" hint-placeholder-count="3">
+        <div onClick="{{ de.click }}" style="{{ de.st }}">
+          <div style="width:78px;flex-shrink:0;font-weight:700;font-size:.86em;color:rgba(35,42,61,.62)">{{ de.time }}</div>
+          <div style="width:5px;align-self:stretch;border-radius:99px;background:{{ de.bar }}"></div>
+          <div style="flex:1"><div style="font-weight:700;font-size:.95em">{{ de.title }}</div><div style="color:rgba(35,42,61,.55);font-weight:600;font-size:.8em;display:{{ de.locDisp }}">{{ de.loc }}</div></div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ chOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ chClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:460px;max-width:100%;max-height:92vh;overflow:auto;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.3em;margin:0 0 14px">{{ chHead }}</h2>
+      <input value="{{ chT }}" onChange="{{ onChT }}" placeholder="Chore name" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:12px 14px;font-weight:700;font-size:1em;color:#232A3D;outline-color:#7C5CE0;margin-bottom:12px">
+      <div style="font-weight:700;font-size:.85em;color:rgba(35,42,61,.6);margin-bottom:6px">Who does it?</div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+        <sc-for list="{{ chMems }}" as="chm" hint-placeholder-count="4"><button onClick="{{ chm.tog }}" style="{{ chm.st }}"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:{{ chm.c }}"></span>{{ chm.label }}</button></sc-for>
+      </div>
+      <div style="font-weight:700;font-size:.85em;color:rgba(35,42,61,.6);margin-bottom:6px">Which days?</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        <sc-for list="{{ chDays }}" as="chd" hint-placeholder-count="7"><button onClick="{{ chd.tog }}" style="{{ chd.st }}">{{ chd.l }}</button></sc-for>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+        <span style="font-weight:700;font-size:.85em;color:rgba(35,42,61,.6)">Stars:</span>
+        <button onClick="{{ chDn }}" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(35,42,61,.16);background:#F7F9FF;font-weight:800;cursor:pointer;font-size:1.1em;color:#232A3D">−</button>
+        <span style="font-weight:800;font-size:1.2em;color:#6D4FD1">{{ chStars }} ★</span>
+        <button onClick="{{ chUp }}" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(35,42,61,.16);background:#F7F9FF;font-weight:800;cursor:pointer;font-size:1.1em;color:#232A3D">+</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onClick="{{ chSave }}" style="flex:1;background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:13px;font-weight:700;cursor:pointer;font-size:1em">Save</button>
+        <button onClick="{{ chDel }}" style="display:{{ chDelSt }};border:none;background:rgba(217,91,67,.12);color:#B23B22;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer">Delete</button>
+        <button onClick="{{ chClose }}" style="border:1px solid rgba(35,42,61,.16);background:none;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer;color:#232A3D">Cancel</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ rwOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ rwClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:400px;max-width:100%;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.3em;margin:0 0 14px">{{ rwHead }}</h2>
+      <input value="{{ rwT }}" onChange="{{ onRwT }}" placeholder="Reward name" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:12px 14px;font-weight:700;font-size:1em;color:#232A3D;outline-color:#7C5CE0;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-weight:700;font-size:.85em;color:rgba(35,42,61,.6)">Cost:</span>
+        <button onClick="{{ rwDn }}" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(35,42,61,.16);background:#F7F9FF;font-weight:800;cursor:pointer;font-size:1.1em;color:#232A3D">−</button>
+        <span style="font-weight:800;font-size:1.2em;color:#6D4FD1">{{ rwCost }} ★</span>
+        <button onClick="{{ rwUp }}" style="width:38px;height:38px;border-radius:50%;border:1px solid rgba(35,42,61,.16);background:#F7F9FF;font-weight:800;cursor:pointer;font-size:1.1em;color:#232A3D">+</button>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onClick="{{ rwSave }}" style="flex:1;background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:13px;font-weight:700;cursor:pointer;font-size:1em">Save</button>
+        <button onClick="{{ rwDel }}" style="display:{{ rwDelSt }};border:none;background:rgba(217,91,67,.12);color:#B23B22;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer">Delete</button>
+        <button onClick="{{ rwClose }}" style="border:1px solid rgba(35,42,61,.16);background:none;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer;color:#232A3D">Cancel</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ rdOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ rdClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:420px;max-width:100%;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.25em;margin:0 0 4px">Redeem: {{ rdTitle }}</h2>
+      <div style="font-weight:700;color:#6D4FD1;margin-bottom:14px">Costs {{ rdCost }} ★ — who's cashing in?</div>
+      <sc-for list="{{ rdKids }}" as="rk" hint-placeholder-count="3">
+        <button onClick="{{ rk.pick }}" style="{{ rk.st }}">
+          <div style="width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:'Outfit';font-weight:600;background:{{ rk.c }}">{{ rk.init }}</div>
+          <div style="flex:1;text-align:left"><div style="font-weight:700">{{ rk.name }}</div><div style="font-weight:600;font-size:.8em;color:rgba(35,42,61,.55)">{{ rk.note }}</div></div>
+          <div style="font-weight:800;color:#6D4FD1">{{ rk.bal }} ★</div>
+        </button>
+      </sc-for>
+      <button onClick="{{ rdClose }}" style="width:100%;border:1px solid rgba(35,42,61,.16);background:none;border-radius:999px;padding:12px;font-weight:700;cursor:pointer;margin-top:8px;color:#232A3D">Cancel</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ mpOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ mpClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:440px;max-width:100%;max-height:92vh;overflow:auto;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.25em;margin:0 0 12px">{{ mpTitle }}</h2>
+      <input value="{{ mpQ }}" onChange="{{ onMpQ }}" placeholder="Search or type a meal…" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:12px 14px;font-weight:700;font-size:.95em;color:#232A3D;outline-color:#7C5CE0;margin-bottom:10px">
+      <button onClick="{{ mpUseCustom }}" style="display:{{ mpCustomDisp }};width:100%;text-align:left;border:1.5px dashed rgba(35,42,61,.25);background:none;border-radius:14px;padding:11px 14px;font-weight:700;cursor:pointer;margin-bottom:8px;color:#232A3D">Use “{{ mpQ }}”</button>
+      <sc-for list="{{ mpList }}" as="mp" hint-placeholder-count="5">
+        <button onClick="{{ mp.pick }}" style="width:100%;display:flex;align-items:center;gap:10px;border:none;background:none;border-radius:12px;padding:11px 10px;font-weight:700;cursor:pointer;font-size:.95em;color:#232A3D;border-bottom:1px solid rgba(35,42,61,.06)" style-hover="background:rgba(35,42,61,.05)">
+          <span style="flex:1;text-align:left">{{ mp.name }}</span>
+          <span style="font-weight:700;font-size:.7em;color:#3D6DE8;background:rgba(61,109,232,.1);border-radius:999px;padding:3px 9px;display:{{ mp.tagDisp }}">{{ mp.tag }}</span>
+        </button>
+      </sc-for>
+      <button onClick="{{ mpClear }}" style="display:{{ mpClearDisp }};width:100%;border:none;background:rgba(217,91,67,.1);color:#B23B22;border-radius:999px;padding:11px;font-weight:700;cursor:pointer;margin-top:10px">Clear this night</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ fdOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ fdClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:400px;max-width:100%;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin:0 0 12px">“{{ fdName }}” — which night?</h2>
+      <div style="display:grid;gap:7px">
+        <sc-for list="{{ fdDays }}" as="fdd" hint-placeholder-count="7">
+          <button onClick="{{ fdd.pick }}" style="display:flex;gap:10px;align-items:center;border:1px solid rgba(35,42,61,.14);background:#F7F9FF;border-radius:14px;padding:11px 14px;font-weight:700;cursor:pointer;color:#232A3D" style-hover="border-color:#7C5CE0">
+            <span style="flex:1;text-align:left">{{ fdd.l }}</span><span style="font-weight:600;font-size:.82em;color:rgba(35,42,61,.5)">{{ fdd.cur }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ cdOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ cdClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:420px;max-width:100%;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.3em;margin:0 0 14px">{{ cdHead }}</h2>
+      <input value="{{ cdT }}" onChange="{{ onCdT }}" placeholder="What are we counting down to?" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:12px 14px;font-weight:700;font-size:1em;color:#232A3D;outline-color:#7C5CE0;margin-bottom:10px">
+      <input type="date" value="{{ cdDate }}" onChange="{{ onCdDate }}" style="width:100%;background:#FFF;border:1.5px solid rgba(35,42,61,.16);border-radius:14px;padding:11px 12px;font-weight:600;font-size:.9em;color:#232A3D;outline-color:#7C5CE0;margin-bottom:12px">
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <sc-for list="{{ cdMems }}" as="cdm" hint-placeholder-count="5"><button onClick="{{ cdm.tog }}" style="{{ cdm.st }}"><span style="width:10px;height:10px;border-radius:50%;display:inline-block;background:{{ cdm.c }}"></span>{{ cdm.label }}</button></sc-for>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button onClick="{{ cdSave }}" style="flex:1;background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:13px;font-weight:700;cursor:pointer;font-size:1em">Save</button>
+        <button onClick="{{ cdDel }}" style="display:{{ cdDelSt }};border:none;background:rgba(217,91,67,.12);color:#B23B22;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer">Delete</button>
+        <button onClick="{{ cdClose }}" style="border:1px solid rgba(35,42,61,.16);background:none;border-radius:999px;padding:13px 18px;font-weight:700;cursor:pointer;color:#232A3D">Cancel</button>
+      </div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ ieOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.45);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ ieClose }}">
+    <div style="background:#FFFFFF;border-radius:24px;padding:24px;width:420px;max-width:100%;max-height:92vh;overflow:auto;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <h2 style="font-family:'Outfit';font-weight:600;font-size:1.3em;margin:0 0 14px">{{ ieHead }}</h2>
+      <sc-for list="{{ ieFields }}" as="ief" hint-placeholder-count="2">
+        <div style="margin-bottom:12px">
+          <div style="font-weight:700;font-size:.78em;color:rgba(35,42,61,.6);margin-bottom:5px">{{ ief.lbl }}</div>
+          <input value="{{ ief.v }}" onChange="{{ ief.on }}" type="{{ ief.tp }}" step="any" style="width:100%;box-sizing:border-box;border:1.5px solid rgba(35,42,61,.16);border-radius:12px;padding:11px 13px;font:inherit;font-weight:600;color:#232A3D;background:#FCFCFE"></input>
+        </div>
+      </sc-for>
+      <div style="display:flex;gap:10px;margin-top:16px"><button onClick="{{ ieClose }}" style="flex:1;border:1px solid rgba(35,42,61,.16);background:none;border-radius:999px;padding:12px;font-weight:700;cursor:pointer;color:#232A3D">Cancel</button><button onClick="{{ ieSave }}" style="flex:1;border:none;background:#232A3D;color:#F7F9FF;border-radius:999px;padding:12px;font-weight:700;cursor:pointer">Save</button></div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ pinOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.55);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ pinCancel }}">
+    <div style="{{ pinPanelSt }}" onClick="{{ eatClick }}">
+      <div style="width:46px;height:46px;border-radius:50%;background:rgba(35,42,61,.07);display:flex;align-items:center;justify-content:center;margin:0 auto 10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#232A3D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="11" width="12" height="9" rx="2.2"></rect><path d="M9 11V8a3 3 0 0 1 6 0v3"></path></svg></div>
+      <div style="font-family:'Outfit';font-weight:600;font-size:1.15em;text-align:center">{{ pinMsg }}</div>
+      <div style="display:flex;gap:12px;justify-content:center;margin:16px 0 18px">
+        <sc-for list="{{ pinDots }}" as="pdt" hint-placeholder-count="4"><div style="{{ pdt.st }}"></div></sc-for>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,72px);gap:9px;justify-content:center">
+        <sc-for list="{{ pinKeys }}" as="pk" hint-placeholder-count="9">
+          <button onClick="{{ pk.press }}" style="height:60px;border-radius:18px;border:1px solid rgba(35,42,61,.13);background:#F7F9FF;font-family:'Outfit';font-weight:600;font-size:1.4em;cursor:pointer;color:#232A3D" style-hover="background:rgba(124,92,224,.18)">{{ pk.l }}</button>
+        </sc-for>
+        <div></div>
+        <button onClick="{{ pinZero }}" style="height:60px;border-radius:18px;border:1px solid rgba(35,42,61,.13);background:#F7F9FF;font-family:'Outfit';font-weight:600;font-size:1.4em;cursor:pointer;color:#232A3D" style-hover="background:rgba(124,92,224,.18)">0</button>
+        <button onClick="{{ pinBack }}" style="height:60px;border-radius:18px;border:1px solid rgba(35,42,61,.13);background:#F7F9FF;font-weight:700;font-size:1em;cursor:pointer;color:#232A3D">⌫</button>
+      </div>
+      <div style="text-align:center;color:rgba(35,42,61,.45);font-weight:600;font-size:.78em;margin-top:14px">Demo PIN: 1234</div>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ vOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;inset:0;background:rgba(20,25,43,.55);z-index:100;display:flex;align-items:center;justify-content:center;padding:18px" onClick="{{ vClose }}">
+    <div style="background:#FFFFFF;border-radius:26px;padding:30px;width:430px;max-width:100%;text-align:center;animation:fadeUp .25s ease both" onClick="{{ eatClick }}">
+      <div style="{{ vBigSt }}"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#F7F9FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9.5" y="3.5" width="5" height="10.5" rx="2.5"></rect><path d="M6.5 11.5a5.5 5.5 0 0 0 11 0M12 17.5V21"></path></svg></div>
+      <div style="font-family:'Outfit';font-weight:600;font-size:1.2em;margin-top:14px">{{ vStatus }}</div>
+      <div style="font-weight:600;color:rgba(35,42,61,.6);margin-top:8px;min-height:24px;font-size:.95em">{{ vText }}</div>
+      <sc-if value="{{ vReplyOn }}" hint-placeholder-val="{{ false }}">
+        <div style="background:rgba(124,92,224,.12);border-radius:16px;padding:12px 16px;font-weight:700;margin-top:12px;color:#232A3D">{{ vReply }}</div>
+      </sc-if>
+      <div style="color:rgba(35,42,61,.45);font-weight:600;font-size:.78em;margin-top:14px">Try: “Add milk to the grocery list” · “Cannon did brush teeth” · “What's for dinner?”</div>
+      <button onClick="{{ vClose }}" style="margin-top:14px;border:1px solid rgba(35,42,61,.16);background:none;border-radius:999px;padding:11px 22px;font-weight:700;cursor:pointer;color:#232A3D">Close</button>
+    </div>
+  </div>
+</sc-if>
+
+<sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:#232A3D;color:#F7F9FF;border-radius:999px;padding:13px 24px;font-weight:700;font-size:.95em;z-index:120;box-shadow:0 16px 40px -14px rgba(20,25,43,.6);animation:fadeUp .25s ease both;max-width:88vw">{{ toastT }}</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;tvMode&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Display&quot;},&quot;showWeather&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Display&quot;},&quot;weekStartMonday&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:false,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Calendar&quot;}}">
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.KEY = 'familyCouncil.proto.v1';
+    let d = null;
+    try { d = JSON.parse(localStorage.getItem(this.KEY)); } catch (e) {}
+    if (!d || !d.members) d = this.seed();
+    const cmap = {'#148F82':'#0F8B8D','#3E6FE1':'#3D6DE8','#E85D8A':'#8B5CF6','#F19A2E':'#31A05F','#4F9D69':'#2E9E6B'};
+    (d.members || []).forEach(m => { if (cmap[m.color]) m.color = cmap[m.color]; });
+    ((d.settings && d.settings.feeds) || []).forEach(f => { if (cmap[f.color]) f.color = cmap[f.color]; });
+    if (!d.preflight) d.preflight = this.seedPf(d);
+    this.mig(d);
+    this.state = {
+      d, page: 'today', w: window.innerWidth, now: Date.now(), wx: null, tdh: null, tdhI: 0, intEd: null,
+      parentUntil: 0, pin: null, pinE: '', pinErrN: 0, toast: null,
+      calView: 'week', wOff: 0, mOff: 0, dd: null, fltr: null,
+      ev: null, ch: null, rw: null, rd: null,
+      mp: null, mpQ: '', fd: null, favN: '',
+      listSel: d.lists[0] ? d.lists[0].id : null, ni: '', nl: '',
+      cd: null, sk: { in: '', busy: false, out: null, err: null },
+      nb: {}, memSel: null, vc: null, zipMsg: '', nf: { name: '', url: '' }, pinN: ''
+    };
+  }
+  u() { return Math.random().toString(36).slice(2, 9); }
+  ymd(dt) { const p = n => String(n).padStart(2, '0'); return dt.getFullYear() + '-' + p(dt.getMonth() + 1) + '-' + p(dt.getDate()); }
+  pd(s) { const a = s.split('-').map(Number); return new Date(a[0], a[1] - 1, a[2]); }
+  ad(s, n) { const d = this.pd(s); d.setDate(d.getDate() + n); return this.ymd(d); }
+  today() { return this.ymd(new Date()); }
+  dowOf(s) { return this.pd(s).getDay(); }
+  fmtT(hm) { if (!hm) return 'All day'; const h = +hm.slice(0, 2), m = hm.slice(3, 5); const ap = h >= 12 ? 'PM' : 'AM'; const h12 = h % 12 || 12; return m === '00' ? h12 + ' ' + ap : h12 + ':' + m + ' ' + ap; }
+  fmtD(s) { return this.pd(s).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }); }
+
+  pfCfg(d2, kid) { d2.preflight = d2.preflight || { open: true, kids: {} }; d2.preflight.kids[kid] = d2.preflight.kids[kid] || { gym: [], lun: [], bring: [] }; return d2.preflight.kids[kid]; }
+  seedPf(d) {
+    const presets = { c: { gym: [2, 4], lun: [1, 2, 3, 4, 5], bring: [{ id: 'b1', text: 'Swim bag', days: [1] }, { id: 'b2', text: 'Library book', days: [3] }] }, h: { gym: [1, 3], lun: [1, 2, 3, 4, 5], bring: [{ id: 'b3', text: 'Violin', days: [2] }, { id: 'b4', text: 'Library book', days: [5] }] }, r: { gym: [5], lun: [1, 3, 5], bring: [{ id: 'b5', text: 'Show & tell item', days: [5] }] } };
+    const cfg = { open: true, kids: {} };
+    (d.members || []).filter(m => m.role === 'kid').forEach(k => cfg.kids[k.id] = presets[k.id] || { gym: [], lun: [1, 2, 3, 4, 5], bring: [] });
+    return cfg;
+  }
+  pfRowsFor(kid, dow) {
+    const pf = this.state ? this.state.d.preflight : null; const cfg = pf && pf.kids ? pf.kids[kid.id] : null; if (!cfg) return [];
+    const rows = []; const gym = (cfg.gym || []).includes(dow);
+    rows.push({ key: 'pfu', text: gym ? 'Wear gym uniform' : 'Wear full uniform', badge: gym ? 'GYM' : 'FULL' });
+    if ((cfg.lun || []).includes(dow)) rows.push({ key: 'pfl', text: 'Pack lunch' }); else rows.push({ key: null, text: 'Buying school lunch today' });
+    (cfg.bring || []).forEach(b => { if ((b.days || []).includes(dow)) rows.push({ key: 'pfb' + b.id, text: 'Bring: ' + b.text }); });
+    rows.push({ key: 'c1', text: 'Brush teeth' });
+    rows.push({ key: 'pfv', text: 'Take vitamins' });
+    rows.push({ key: 'pfh', text: 'Brush hair' });
+    return rows;
+  }
+  mig(d) {
+    if (!d.members.some(m => m.id === 'p' || /^patrick$/i.test(m.name))) d.members.unshift({ id: 'p', name: 'Patrick', role: 'parent', color: '#4A5B8C' });
+    const row = d.members.find(m => /^rowan$/i.test(m.name)); if (row) row.photo = 'assets/rowan.png';
+    const can = d.members.find(m => /^cannon$/i.test(m.name)); if (can) can.photo = 'assets/cannon.png';
+    if (!d.fit) d.fit = { p: { kind: 'whoop', sleep: 84, strain: 12.4 }, e: { kind: 'oura', sleep: 88, act: 72 } };
+    if (!d.gl) d.gl = {
+      c: { bal: 46.5, allow: 8, goal: 'New lacrosse head', goalCost: 90, saved: 32, pay: [{ d: 'Fri', for: 'Chore payout', amt: 4 }, { d: 'Tue', for: 'Trash + recycling', amt: 1.5 }] },
+      h: { bal: 28.75, allow: 6, goal: 'Telescope fund', goalCost: 120, saved: 54, pay: [{ d: 'Fri', for: 'Chore payout', amt: 3.5 }, { d: 'Sat', for: 'Pet care bonus', amt: 1 }] },
+      r: { bal: 12.25, allow: 4, goal: 'RC monster truck', goalCost: 60, saved: 18, pay: [{ d: 'Fri', for: 'Chore payout', amt: 2 }, { d: 'Sun', for: 'Room rescue', amt: 0.75 }] }
+    };
+    return d;
+  }
+  seed() {
+    const t = new Date(), td = this.ymd(t), dow = t.getDay();
+    const onDow = (w, tg) => { const d = new Date(t); d.setDate(d.getDate() - dow + tg + w * 7); return this.ymd(d); };
+    const u = () => Math.random().toString(36).slice(2, 9);
+    const members = [
+      { id: 'e', name: 'Elizabeth', role: 'parent', color: '#0F8B8D' },
+      { id: 'c', name: 'Cannon', role: 'kid', age: 10, color: '#3D6DE8' },
+      { id: 'h', name: 'Hadley', role: 'kid', age: 8, color: '#8B5CF6' },
+      { id: 'r', name: 'Rowan', role: 'kid', age: 5, color: '#31A05F' }
+    ];
+    const events = [
+      { id: u(), title: 'Swim team practice', date: onDow(0, 1), start: '16:00', dur: 60, memberIds: ['c'], loc: 'Rec center pool', recur: 'weekly' },
+      { id: u(), title: 'Soccer practice', date: onDow(0, 2), start: '17:30', dur: 60, memberIds: ['h'], loc: 'Algonkian Park, Field 3', recur: 'weekly' },
+      { id: u(), title: 'Gymnastics — Little Flips', date: onDow(0, 6), start: '09:30', dur: 45, memberIds: ['r'], loc: 'Little Flips Gym', recur: 'weekly' },
+      { id: u(), title: 'Piano lesson', date: onDow(0, 4), start: '16:30', dur: 30, memberIds: ['c'], loc: 'Ms. Alvarez', recur: 'weekly' },
+      { id: u(), title: 'Family movie night', date: onDow(0, 5), start: '19:00', dur: 120, memberIds: [], loc: 'Living room', recur: 'weekly' },
+      { id: u(), title: 'Book club', date: onDow(0, 3), start: '19:30', dur: 90, memberIds: ['e'], loc: "Priya's house", recur: 'weekly' },
+      { id: u(), title: 'Dentist — Hadley', date: onDow(1, 2), start: '14:00', dur: 45, memberIds: ['h', 'e'], loc: 'Smile Studio' },
+      { id: u(), title: 'Farmers market', date: onDow(1, 6), start: '10:00', dur: 60, memberIds: [], loc: 'Old Town' },
+      { id: u(), title: "Sleepover at Gran's", date: onDow(1, 5), start: '17:00', dur: null, memberIds: ['c', 'h', 'r'], loc: "Gran's house" },
+      { id: u(), title: 'Library storytime', date: td, start: '10:30', dur: 45, memberIds: ['r', 'e'], loc: 'Cascades Library' },
+      { id: u(), title: 'Pool day with the Nguyens', date: td, start: '15:00', dur: 120, memberIds: [], loc: 'Community pool' }
+    ];
+    const chores = [
+      { id: 'c1', title: 'Brush teeth (AM & PM)', memberIds: ['c', 'h', 'r'], days: [0, 1, 2, 3, 4, 5, 6], stars: 1 },
+      { id: 'c2', title: 'Make your bed', memberIds: ['c', 'h', 'r'], days: [0, 1, 2, 3, 4, 5, 6], stars: 1 },
+      { id: 'c3', title: 'Drink your water', memberIds: ['c', 'h', 'r'], days: [0, 1, 2, 3, 4, 5, 6], stars: 1 },
+      { id: 'c4', title: 'Reading & homework', memberIds: ['c', 'h'], days: [1, 2, 3, 4, 5], stars: 2 },
+      { id: 'c5', title: 'Clean your room', memberIds: ['c', 'h', 'r'], days: [3, 6], stars: 2 },
+      { id: 'c6', title: 'Sleep in your own bed', memberIds: ['h', 'r'], days: [0, 1, 2, 3, 4, 5, 6], stars: 2 }
+    ];
+    const done = {};
+    const kids = ['c', 'h', 'r'];
+    for (let i = 1; i <= 6; i++) {
+      const day = this.ad(td, -i), dw = this.dowOf(day), dd = {};
+      chores.forEach((ch, ci) => ch.memberIds.forEach((k, ki) => {
+        if (ch.days.includes(dw) && (i + ci + ki) % 4 !== 0) dd[ch.id + '|' + k] = 1;
+      }));
+      done[day] = dd;
+    }
+    done[td] = { 'c1|c': 1, 'c1|h': 1, 'c1|r': 1, 'c2|c': 1, 'c3|r': 1 };
+    const favorites = [
+      { id: u(), name: 'Taco night', tag: 'Crowd favorite' }, { id: u(), name: 'One-pot spaghetti', tag: '30 min' },
+      { id: u(), name: 'Sheet-pan chicken & veg', tag: 'Easy' }, { id: u(), name: 'Homemade pizza', tag: 'Friday classic' },
+      { id: u(), name: 'Breakfast-for-dinner', tag: 'Kids pick' }, { id: u(), name: 'Teriyaki salmon bowls', tag: 'Healthy' },
+      { id: u(), name: 'Slow-cooker chili', tag: 'Make ahead' }, { id: u(), name: 'Mac & cheese + broccoli', tag: '15 min' }
+    ];
+    const mealPlan = {};
+    mealPlan[this.ad(td, -1)] = 'One-pot spaghetti'; mealPlan[td] = 'Taco night';
+    mealPlan[this.ad(td, 1)] = 'Sheet-pan chicken & veg'; mealPlan[this.ad(td, 2)] = 'Homemade pizza';
+    const d = {
+      members, events, chores, done,
+      rewards: [
+        { id: 'r1', title: 'Pick movie night movie', cost: 10 }, { id: 'r2', title: '30 min extra screen time', cost: 8 },
+        { id: 'r3', title: 'Ice cream outing', cost: 15 }, { id: 'r4', title: 'Stay up 30 min late', cost: 12 },
+        { id: 'r5', title: 'Pick Friday dinner', cost: 10 }, { id: 'r6', title: '$5 pocket money', cost: 25 }
+      ],
+      redemptions: [
+        { id: u(), kidId: 'h', title: '30 min extra screen time', cost: 8, ts: Date.now() - 2 * 864e5 },
+        { id: u(), kidId: 'c', title: 'Pick movie night movie', cost: 10, ts: Date.now() - 5 * 864e5 }
+      ],
+      favorites, mealPlan,
+      lists: [
+        { id: 'l1', name: 'Groceries', items: [
+          { id: u(), text: 'Milk', done: false, by: 'e' }, { id: u(), text: 'Eggs', done: false, by: 'e' },
+          { id: u(), text: 'Strawberries', done: true, by: 'h' }, { id: u(), text: 'String cheese', done: false, by: 'r' },
+          { id: u(), text: 'Goldfish crackers', done: false, by: 'c' }, { id: u(), text: 'Chicken thighs', done: false, by: 'e' },
+          { id: u(), text: 'Tortillas', done: false, by: 'e' } ] },
+        { id: 'l2', name: 'Target run', items: [
+          { id: u(), text: 'Sunscreen SPF 50', done: false, by: 'e' }, { id: u(), text: 'Pool noodles', done: false, by: 'r' },
+          { id: u(), text: 'Birthday card for Gran', done: false, by: 'e' } ] },
+        { id: 'l3', name: 'Summer bucket list', items: [
+          { id: u(), text: 'Catch fireflies', done: true, by: 'h' }, { id: u(), text: 'Water balloon fight', done: false, by: 'c' },
+          { id: u(), text: 'Great Falls hike', done: false, by: 'e' }, { id: u(), text: 'Build a blanket fort', done: true, by: 'r' } ] }
+      ],
+      countdowns: [
+        { id: u(), title: 'Beach week — OBX', date: this.ad(td, 8), memberId: null },
+        { id: u(), title: 'First day of school', date: this.ad(td, 27), memberId: null },
+        { id: u(), title: "Cannon's swim meet", date: this.ad(td, 9), memberId: 'c' },
+        { id: u(), title: "Hadley's birthday", date: this.ad(td, 50), memberId: 'h' }
+      ],
+      settings: { pin: '1234', zip: '20165', lat: 39.065, lon: -77.395, place: 'Potomac Falls, VA',
+        feeds: [{ id: 'f1', name: 'School calendar (LCPS)', url: 'https://www.lcps.org/calendars/calendar.ics', color: '#5B8DEF', status: 'Not synced yet' }] },
+      feedEv: {}
+    };
+    d.preflight = this.seedPf(d);
+    try { localStorage.setItem(this.KEY, JSON.stringify(d)); } catch (e) {}
+    return d;
+  }
+
+  setD(fn) { this.setState(s => { fn(s.d); try { localStorage.setItem(this.KEY, JSON.stringify(s.d)); } catch (e) {} return { d: s.d }; }); }
+  toast(t) { const id = Math.random(); this.setState({ toast: { t, id } }); setTimeout(() => { if (this.state.toast && this.state.toast.id === id) this.setState({ toast: null }); }, 2800); }
+  requirePin(cb, msg) { if (Date.now() < this.state.parentUntil) { cb(); return; } this.setState({ pin: { cb, msg: msg || 'Parent PIN' }, pinE: '' }); }
+
+  componentDidMount() {
+    this.tick = setInterval(() => { this.setState({ now: Date.now() }); if (this.tdhFor && this.tdhFor !== this.today()) this.loadTdh(); }, 30000);
+    this.onR = () => this.setState({ w: window.innerWidth });
+    window.addEventListener('resize', this.onR);
+    this.loadWx();
+    this.loadTdh();
+  }
+  componentWillUnmount() { clearInterval(this.tick); window.removeEventListener('resize', this.onR); if (this.recog) try { this.recog.abort(); } catch (e) {} }
+
+  loadWx() {
+    const s = this.state.d.settings;
+    fetch('https://api.open-meteo.com/v1/forecast?latitude=' + s.lat + '&longitude=' + s.lon + '&current=temperature_2m,weather_code&hourly=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=auto&forecast_days=8')
+      .then(r => r.json()).then(j => {
+        const hr = {}; (j.hourly.time || []).forEach((t, i) => hr[t.slice(0, 13)] = { t: Math.round(j.hourly.temperature_2m[i]), c: j.hourly.weather_code[i] });
+        const dy = {}; (j.daily.time || []).forEach((t, i) => dy[t] = { hi: Math.round(j.daily.temperature_2m_max[i]), lo: Math.round(j.daily.temperature_2m_min[i]), c: j.daily.weather_code[i] });
+        this.setState({ wx: { cur: { t: Math.round(j.current.temperature_2m), c: j.current.weather_code }, hr, dy } });
+      }).catch(() => {});
+  }
+  loadTdh() {
+    const n = new Date(), mm = String(n.getMonth() + 1).padStart(2, '0'), dd = String(n.getDate()).padStart(2, '0');
+    this.tdhFor = this.today();
+    const BAD = /war|battle|kill|dead|death|died|dies|murder|assassin|massacr|bomb|attack|execut|terror|hostage|slave|riot|shot|shoot|suicide|invad|invasion|genocide|hijack|crash|disaster|casualt|wounded|prison|lynch|abort|weapon|missile|conquer|siege|troops|army|rebellion|uprising|coup |sank|sinks|plague|epidemic|pandemic|fire destroys|hanged|beheaded/i;
+    const GOOD = /first|invent|discover|patent|launch|space|astronaut|moon|planet|comet|telescope|opened|opens|founded|premiere|debut|olympic|world record|dinosaur|fossil|zoo|railway|railroad|bridge|museum|university|library|published|cartoon|television|telephone|radio|computer|airplane|flight|balloon|expedition|summit|national park|vaccine|element|bicycle|automobile|canal|lighthouse|observatory/i;
+    fetch('https://api.wikimedia.org/feed/v1/wikipedia/en/onthisday/all/' + mm + '/' + dd)
+      .then(r => r.json()).then(j => {
+        const seen = {};
+        const evs = [].concat(j.selected || [], j.events || [])
+          .filter(e => e.year > 0 && e.text && !BAD.test(e.text) && !seen[e.text] && (seen[e.text] = 1))
+          .map(e => ({ y: e.year, t: e.text.length > 200 ? e.text.slice(0, e.text.lastIndexOf(' ', 197)) + '…' : e.text, s: (GOOD.test(e.text) ? 2 : 0) + (e.text.length < 160 ? 1 : 0) }))
+          .sort((a, b) => b.s - a.s).slice(0, 8);
+        this.setState({ tdh: evs, tdhI: 0 });
+      }).catch(() => this.setState({ tdh: [] }));
+  }
+  rideChips(ev, field, chipSt) {
+    if (!ev) return [];
+    const set = v => this.setState(s => ({ ev: { ...s.ev, [field]: v } }));
+    return [{ k: 'none', label: 'No one', st: chipSt(!ev[field]), tog: () => set('') }]
+      .concat(this.state.d.members.filter(m => m.role === 'parent').map(m => ({ k: m.id, label: m.name, st: chipSt(ev[field] === m.id), tog: () => set(m.id) })));
+  }
+  rideTags(e, short) {
+    return [['drop', 'Drop-off', 'M5.5 20a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4zM18.5 20a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4zM3 18.2V13l2-4.6A1.6 1.6 0 0 1 6.5 7.5h7a1.6 1.6 0 0 1 1.5 1L17 13h4v5.2M7.5 18.2h9M3.8 13h12.7'], ['pick', 'Pick-up', 'M5.5 20a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4zM18.5 20a1.7 1.7 0 1 0 0-3.4 1.7 1.7 0 0 0 0 3.4zM3 18.2V13l2-4.6A1.6 1.6 0 0 1 6.5 7.5h7a1.6 1.6 0 0 1 1.5 1L17 13h4v5.2M7.5 18.2h9M12 1.5v4M10.2 3.7L12 5.5l1.8-1.8']]
+      .filter(([f]) => e[f] && this.mem(e[f]))
+      .map(([f, lbl, d2]) => { const m = this.mem(e[f]); return { k: f, d: d2, t: (short ? (f === 'drop' ? 'Drop' : 'Pick') : lbl) + ' · ' + m.name, st: 'display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:.72em;border-radius:999px;padding:3px 8px;white-space:nowrap;color:#F7F9FF;background:' + m.color }; });
+  }
+  avSt(m, base) { return base + ';background:' + m.color + (m.photo ? ";background-image:url('" + m.photo + "');background-size:cover;background-position:center" : ''); }
+  avI(m) { return m.photo ? '' : (m.name[0] || '?'); }
+  kidTheme(m) {
+    const n = ((m && m.name) || '').toLowerCase();
+    const ROCKET = 'M12 2.2c2.9 2.4 4 6 4 9.1l-4 4.2-4-4.2c0-3.1 1.1-6.7 4-9.1zM12 8a1.6 1.6 0 1 0 0 3.2A1.6 1.6 0 0 0 12 8zM8 11.5l-2.8 2.8.9 2.8 2.6-1M16 11.5l2.8 2.8-.9 2.8-2.6-1M12 15.5v3.2M10.2 21h3.6';
+    const PLANET = 'M12 5.6a6.4 6.4 0 1 0 0 12.8 6.4 6.4 0 0 0 0-12.8M5.8 9.8c-2.6.9-4.2 2-3.9 3 .4 1.4 4.2 1.4 8.6 0 4.3-1.4 7.5-3.5 7.1-4.9-.3-1-2.3-1.1-4.9-.5';
+    const MOON = 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z';
+    const STAR = 'M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z';
+    const BALL = 'M4.6 15.2C4.6 9.2 9.2 4.6 15.2 4.6c2.3 0 4.2 1.9 4.2 4.2 0 6-4.6 10.6-10.6 10.6-2.3 0-4.2-1.9-4.2-4.2zM9.3 14.7l5.4-5.4M10.5 11.6l1.9 1.9M12.6 9.5l1.9 1.9';
+    const GOAL = 'M12 20v-9M5 11V4M19 11V4M5 11h14M8.5 20h7';
+    const LAX = 'M14.8 3.2a4.6 4.6 0 0 1 4.6 4.6c0 2.9-2.3 5.2-5.2 5.2-1.3 0-2.5-.5-3.4-1.3L4.2 18.4M12.4 4.9l4.4 4.4M10.9 7.6l3.6 3.6';
+    const TRUCK = 'M7 11.9a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2zM17 11.9a3.6 3.6 0 1 0 0 7.2 3.6 3.6 0 0 0 0-7.2zM10.6 15.5h2.8M8.4 10L9.6 4.8h5l1.4 5.2M9.9 7.4h5.4M4.6 10h14.8';
+    const BOLT = 'M13 2.5L5.5 13H10l-1.5 8.5L16 11h-4.5z';
+    const FLAG = 'M5.5 21V4.2c3.8-2 6.2 2 10 0V13c-3.8 2-6.2-2-10 0';
+    const D = (d, right, top, w, c, o, r, f) => ({ k: right + '-' + top, d, f: f ? 'currentColor' : 'none', st: 'position:absolute;right:' + right + 'px;top:' + top + 'px;width:' + w + 'px;height:' + w + 'px;color:' + c + ';opacity:' + o + ';transform:rotate(' + (r || 0) + 'deg)' });
+    if (n === 'hadley') return { tag: 'Future astronaut', bg: 'linear-gradient(115deg,#1B2145 30%,#454FA0 70%,#7C5CE0)', fg: '#F7F9FF', sub: 'rgba(247,249,255,.72)',
+      deco: [D(ROCKET, 36, 14, 62, '#F7F9FF', .6, 16), D(PLANET, 128, 52, 44, '#B9A6F1', .55, -8), D(MOON, 300, 18, 28, '#F7F9FF', .4), D(STAR, 215, 16, 20, '#FFD98A', .85, 0, 1), D(STAR, 255, 68, 13, '#FFD98A', .6, 0, 1), D(STAR, 108, 10, 11, '#F7F9FF', .7, 0, 1)] };
+    if (n === 'cannon') return { tag: 'Go Irish · Go Bills', bg: 'linear-gradient(115deg,#0C2340 35%,#1D4FA8 75%,#3D6DE8)', fg: '#F7F9FF', sub: 'rgba(247,249,255,.72)',
+      deco: [D(BALL, 38, 16, 58, '#C99700', .8, -6), D(GOAL, 130, 26, 54, '#F7F9FF', .45), D(LAX, 214, 14, 46, '#E8646F', .6, 8), D(STAR, 285, 60, 15, '#C99700', .65, 0, 1)] };
+    if (n === 'rowan') return { tag: 'Monster truck racer', bg: 'linear-gradient(115deg,#14301E 30%,#1F8A5B 75%,#37B87F)', fg: '#F7F9FF', sub: 'rgba(247,249,255,.72)',
+      deco: [D(TRUCK, 36, 16, 66, '#F7F9FF', .7), D(BOLT, 140, 10, 30, '#FFD98A', .75, 10, 1), D(FLAG, 196, 34, 40, '#F7F9FF', .45), D(BOLT, 258, 58, 16, '#FFD98A', .55, -8, 1)] };
+    return null;
+  }
+  wxD(c) {
+    const SUN = 'M12 7.5a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9M12 3v2M12 19v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M3 12h2M19 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4';
+    const PARTLY = 'M5.5 10a3.5 3.5 0 0 1 6.4-1.9M9 3.5v1.8M3.5 9h1.8M5.1 5.1l1.3 1.3M10 20h7.5a3 3 0 0 0 .3-6A4.8 4.8 0 0 0 8.6 12.6 3.6 3.6 0 0 0 10 20z';
+    const CLOUD = 'M7 18h9.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 10.2 4 4 0 0 0 7 18z';
+    const RAIN = 'M7 15h9.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 7.2 4 4 0 0 0 7 15zM8.5 18l-.8 2.2M12.5 18l-.8 2.2M16.5 18l-.8 2.2';
+    const SNOW = 'M7 15h9.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 7.2 4 4 0 0 0 7 15zM8.5 18.5l.02 0M12.5 20.5l.02 0M16.5 18.5l.02 0';
+    const STORM = 'M7 14h9.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 6.2 4 4 0 0 0 7 14zM12.8 15.5l-2.3 3.5h3.2l-2.3 3.5';
+    const FOG = 'M7 14h9.5a3.5 3.5 0 0 0 .4-7A5.5 5.5 0 0 0 6.6 6.2 4 4 0 0 0 7 14zM6 17.5h12M8 20.5h8';
+    if (c === 0) return SUN; if (c <= 2) return PARTLY; if (c === 3) return CLOUD;
+    if (c === 45 || c === 48) return FOG; if ((c >= 71 && c <= 77) || c === 85 || c === 86) return SNOW;
+    if (c >= 95) return STORM; return RAIN;
+  }
+  wxAt(ds, hm) {
+    if (!this.state.wx || !(this.props.showWeather ?? true)) return null;
+    const h = this.state.wx.hr[ds + 'T' + (hm || '12:00').slice(0, 2)];
+    return h ? { t: h.t + '°', d: this.wxD(h.c) } : null;
+  }
+  bal() {
+    const b = {}; const cs = {}; this.state.d.chores.forEach(c => cs[c.id] = c.stars);
+    Object.values(this.state.d.done).forEach(day => Object.keys(day).forEach(k => { if (day[k]) { const p = k.split('|'); if (cs[p[0]]) b[p[1]] = (b[p[1]] || 0) + cs[p[0]]; } }));
+    this.state.d.redemptions.forEach(r => b[r.kidId] = (b[r.kidId] || 0) - r.cost);
+    return b;
+  }
+  evsOn(ds) {
+    const out = [], dw = this.dowOf(ds);
+    const hit = e => e.date === ds || (e.recur === 'weekly' && this.dowOf(e.date) === dw && ds >= e.date);
+    this.state.d.events.forEach(e => { if (hit(e)) out.push({ ...e, date: ds, _c: null, _ro: false }); });
+    (this.state.d.settings.feeds || []).forEach(f => ((this.state.d.feedEv || {})[f.id] || []).forEach(e => { if (hit(e)) out.push({ ...e, date: ds, _c: f.color, _ro: true }); }));
+    out.sort((a, b) => (a.start || '99') < (b.start || '99') ? -1 : 1);
+    const f = this.state.fltr;
+    return f ? out.filter(e => !e.memberIds || !e.memberIds.length || e.memberIds.some(id => f.includes(id))) : out;
+  }
+  mem(id) { return this.state.d.members.find(m => m.id === id); }
+  dots(ids) { if (!ids || !ids.length) return [{ c: '#8A63C9' }]; return ids.slice(0, 4).map(id => ({ c: (this.mem(id) || {}).color || '#8A63C9' })); }
+  openEv(e) {
+    if (e._ro) { this.toast('From a synced feed — edit it at the source calendar'); return; }
+    this.setState({ ev: e.id ? { id: e.id, t: e.title, date: e.date, start: e.start || '', dur: e.dur ? String(e.dur) : '', loc: e.loc || '', mems: [...(e.memberIds || [])], rec: e.recur === 'weekly', drop: e.drop || '', pick: e.pick || '', orig: e } : e });
+  }
+  startVoice() {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) { this.setState({ vc: { status: 'Voice needs Chrome or Edge', text: '', reply: 'This browser has no speech recognition. Try the Sidekick instead!' } }); return; }
+    this.setState({ vc: { status: 'Listening…', text: '', reply: null } });
+    const r = new SR(); this.recog = r; r.lang = 'en-US'; r.interimResults = true;
+    r.onresult = ev => {
+      let fin = '', inter = '';
+      for (const res of ev.results) (res.isFinal ? fin += res[0].transcript : inter += res[0].transcript);
+      if (inter) this.setState(s => ({ vc: { ...s.vc, text: inter } }));
+      if (fin) { this.setState(s => ({ vc: { ...s.vc, text: fin } })); this.handleVoice(fin.trim()); }
+    };
+    r.onerror = e => this.setState(s => ({ vc: { status: 'Hmm, no luck', text: '', reply: e.error === 'not-allowed' ? 'Microphone permission was blocked.' : 'Could not hear you — try again!' } }));
+    r.onend = () => { const v = this.state.vc; if (v && !v.reply && v.status === 'Listening…') this.setState(s => ({ vc: { ...s.vc, status: 'Done listening' } })); };
+    try { r.start(); } catch (e) {}
+  }
+  handleVoice(raw) {
+    const t = raw.toLowerCase().replace(/[.!?]$/, '');
+    const say = reply => { this.setState({ vc: { status: 'Got it!', text: '“' + raw + '”', reply } }); try { const u = new SpeechSynthesisUtterance(reply); speechSynthesis.speak(u); } catch (e) {} };
+    let m = t.match(/add (.+?) to (?:the |my |our )?(.+?)(?: list)?$/);
+    if (m) {
+      const item = m[1], ln = m[2];
+      const list = this.state.d.lists.find(l => l.name.toLowerCase().includes(ln) || ln.includes(l.name.toLowerCase().split(' ')[0]));
+      if (list) { const text = item.charAt(0).toUpperCase() + item.slice(1); this.setD(d => d.lists.find(l => l.id === list.id).items.push({ id: this.u(), text, done: false, by: 'e' })); say('Added ' + text + ' to ' + list.name + '.'); return; }
+    }
+    if (/dinner/.test(t)) {
+      const ds = /tomorrow/.test(t) ? this.ad(this.today(), 1) : this.today();
+      const meal = this.state.d.mealPlan[ds];
+      say(meal ? (/tomorrow/.test(t) ? 'Tomorrow' : 'Tonight') + " it's " + meal + '!' : 'Nothing planned yet — want to pick something on the Meals page?'); return;
+    }
+    m = t.match(/(?:go to|show|open) (?:the )?(today|home|calendar|chores|meals|lists|countdowns|sidekick|settings)/);
+    if (m) { const p = m[1] === 'home' ? 'today' : m[1]; if (p === 'settings') { this.setState({ vc: null }); this.go('settings'); } else { this.setState({ page: p, vc: null }); } return; }
+    m = t.match(/(\w+) (?:did|finished|completed) (?:the |his |her |their )?(.+)/);
+    if (m) {
+      const kid = this.state.d.members.find(mm => mm.name.toLowerCase() === m[1]);
+      const ch = this.state.d.chores.find(c => c.title.toLowerCase().includes(m[2]) || m[2].includes(c.title.toLowerCase().split(' ')[0]));
+      if (kid && ch) { const td = this.today(); this.setD(d => { d.done[td] = d.done[td] || {}; d.done[td][ch.id + '|' + kid.id] = 1; }); say('Nice work, ' + kid.name + '! ' + ch.title + ' is checked off — plus ' + ch.stars + (ch.stars > 1 ? ' stars.' : ' star.')); return; }
+    }
+    m = t.match(/how many stars (?:does |has )?(\w+)/);
+    if (m) { const kid = this.state.d.members.find(mm => mm.name.toLowerCase() === m[1]); if (kid) { say(kid.name + ' has ' + (this.bal()[kid.id] || 0) + ' stars.'); return; } }
+    say("I didn't catch that one. Try “Add milk to the grocery list” or “What's for dinner?”");
+  }
+  async skRun() {
+    const inp = this.state.sk.in.trim();
+    if (!inp) return;
+    this.setState(s => ({ sk: { ...s.sk, busy: true, err: null, out: null } }));
+    try {
+      if (!window.claude || !window.claude.complete) throw new Error('The Sidekick needs the Claude-connected preview (window.claude not found).');
+      const t = new Date();
+      const names = this.state.d.members.map(m => m.name + (m.role === 'parent' ? ' (parent)' : '')).join(', ');
+      const prompt = 'Today is ' + t.toLocaleDateString('en-US', { weekday: 'long' }) + ', ' + this.today() + '. Family members: ' + names + '. Extract calendar events and shopping/to-do list items from the text below. Reply with ONLY minified JSON, no prose, matching: {"events":[{"title":string,"date":"YYYY-MM-DD","start":"HH:MM" or null,"durationMin":number or null,"members":[names] or [],"location":string or null}],"listItems":[{"list":string,"text":string}]}. Resolve relative dates ("this Saturday", "next Wednesday") from today. Use members [] when it applies to the whole family.\n\nTEXT:\n"""' + inp + '"""';
+      let out = await window.claude.complete(prompt);
+      out = out.replace(/```json|```/g, '').trim();
+      const j = JSON.parse(out.slice(out.indexOf('{'), out.lastIndexOf('}') + 1));
+      const evs = (j.events || []).filter(e => e.title && e.date).map(e => ({ ...e, sel: true }));
+      const its = (j.listItems || []).filter(i => i.text).map(i => ({ ...i, sel: true }));
+      if (!evs.length && !its.length) throw new Error('Nothing I could turn into events or items — try pasting more detail.');
+      this.setState(s => ({ sk: { ...s.sk, busy: false, out: { evs, its } } }));
+    } catch (e) {
+      this.setState(s => ({ sk: { ...s.sk, busy: false, err: e.message || 'Something went wrong — try again.' } }));
+    }
+  }
+  skCommit() {
+    const o = this.state.sk.out; if (!o) return;
+    const selE = o.evs.filter(e => e.sel), selI = o.its.filter(i => i.sel);
+    this.setD(d => {
+      selE.forEach(e => {
+        const ids = (e.members || []).map(n => { const mm = d.members.find(m => m.name.toLowerCase() === String(n).toLowerCase()); return mm && mm.id; }).filter(Boolean);
+        d.events.push({ id: this.u(), title: e.title, date: e.date, start: e.start || null, dur: e.durationMin || null, memberIds: ids, loc: e.location || '', recur: null });
+      });
+      selI.forEach(i => {
+        let list = d.lists.find(l => l.name.toLowerCase() === String(i.list || '').toLowerCase()) || d.lists.find(l => l.name.toLowerCase().includes(String(i.list || 'grocer').toLowerCase().split(' ')[0]));
+        if (!list) { list = { id: this.u(), name: i.list || 'To do', items: [] }; d.lists.push(list); }
+        list.items.push({ id: this.u(), text: i.text, done: false, by: 'e' });
+      });
+    });
+    this.toast('Added ' + selE.length + ' event' + (selE.length === 1 ? '' : 's') + ' and ' + selI.length + ' list item' + (selI.length === 1 ? '' : 's'));
+    this.setState(s => ({ sk: { ...s.sk, out: null, in: '' } }));
+  }
+  go(p) {
+    if (p === 'settings') { this.requirePin(() => this.setState({ page: 'settings' }), 'Settings are parent-only'); return; }
+    this.setState({ page: p });
+  }
+  syncFeed(f) {
+    this.setD(d => d.settings.feeds.find(x => x.id === f.id).status = 'Syncing…');
+    fetch(f.url).then(r => { if (!r.ok) throw 0; return r.text(); }).then(txt => {
+      const evs = this.parseIcs(txt);
+      this.setD(d => { d.feedEv = d.feedEv || {}; d.feedEv[f.id] = evs; d.settings.feeds.find(x => x.id === f.id).status = evs.length + ' events · just synced'; });
+      this.toast('Synced ' + evs.length + ' events from ' + f.name);
+    }).catch(() => {
+      this.setD(d => d.settings.feeds.find(x => x.id === f.id).status = 'Blocked by browser (CORS) — the home server syncs this');
+    });
+  }
+  parseIcs(txt) {
+    const lines = txt.replace(/\r/g, '').replace(/\n[ \t]/g, '').split('\n');
+    const evs = []; let cur = null;
+    const lo = this.ad(this.today(), -30), hi = this.ad(this.today(), 180);
+    for (const ln of lines) {
+      if (ln === 'BEGIN:VEVENT') { cur = {}; continue; }
+      if (ln === 'END:VEVENT') {
+        if (cur && cur.date && cur.title && ((cur.date >= lo && cur.date <= hi) || cur.recur)) evs.push({ id: this.u(), title: cur.title, date: cur.date, start: cur.start || null, dur: null, memberIds: [], loc: cur.loc || '', recur: cur.recur || null });
+        cur = null; continue;
+      }
+      if (!cur) continue;
+      const ci = ln.indexOf(':'); if (ci < 0) continue;
+      const key = ln.slice(0, ci).split(';')[0], val = ln.slice(ci + 1);
+      if (key === 'DTSTART') {
+        const m = val.match(/(\d{4})(\d{2})(\d{2})(T(\d{2})(\d{2}))?/);
+        if (m) { cur.date = m[1] + '-' + m[2] + '-' + m[3]; if (m[4]) cur.start = m[5] + ':' + m[6]; }
+      }
+      if (key === 'SUMMARY') cur.title = val.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/g, ' ');
+      if (key === 'LOCATION') cur.loc = val.replace(/\\,/g, ',');
+      if (key === 'RRULE' && /FREQ=WEEKLY/.test(val)) cur.recur = 'weekly';
+    }
+    return evs.slice(0, 300);
+  }
+  geocode() {
+    const q = this.state.d.settings.zip.trim(); if (!q) return;
+    this.setState({ zipMsg: 'Looking up…' });
+    fetch('https://geocoding-api.open-meteo.com/v1/search?name=' + encodeURIComponent(q) + '&count=1&language=en&format=json' + (/^\d{5}$/.test(q) ? '&countryCode=US' : ''))
+      .then(r => r.json()).then(j => {
+        const r0 = j.results && j.results[0];
+        if (!r0) { this.setState({ zipMsg: 'Not found — try a city name' }); return; }
+        this.setD(d => { d.settings.lat = r0.latitude; d.settings.lon = r0.longitude; d.settings.place = r0.name + (r0.admin1 ? ', ' + r0.admin1 : ''); });
+        this.setState({ zipMsg: 'Now showing ' + r0.name });
+        this.loadWx();
+      }).catch(() => this.setState({ zipMsg: 'Lookup failed — check the connection' }));
+  }
+
+  renderVals() {
+    const S = this.state, d = S.d, w = S.w, TV = this.props.tvMode ?? false;
+    const narrow = w < 760, mid = w >= 760 && w < 1180;
+    const INK = '#232A3D', CREAM = '#F7F9FF', FAM = '#8A63C9';
+    const td = this.today(), nowD = new Date(S.now), dow = nowD.getDay();
+    const ws = (this.props.weekStartMonday ?? false) ? 1 : 0;
+    const bal = this.bal();
+    const kids = d.members.filter(m => m.role === 'kid');
+    const chipSt = on => 'display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:8px 14px;font-weight:700;font-size:.82em;cursor:pointer;border:1.5px solid ' + (on ? INK : 'rgba(35,42,61,.16)') + ';background:' + (on ? INK : '#FFFFFF') + ';color:' + (on ? CREAM : INK) + ';min-height:38px';
+    const ck = on => 'width:26px;height:26px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;border:2px solid ' + (on ? '#22A06B' : 'rgba(35,42,61,.25)') + ';background:' + (on ? '#22A06B' : '#FFF');
+    const CKD = 'M5 12.5l5 5 9-11';
+
+    // nav
+    const pages = [
+      ['today', 'Today', 'M4 11.5 12 5l8 6.5M6.5 10.5V19h11v-8.5'],
+      ['calendar', 'Calendar', 'M4 6.5h16v13.5H4zM8 4v4M16 4v4M4 11h16'],
+      ['chores', 'Chores', 'M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z'],
+      ['meals', 'Meals', 'M7 4v6M4.5 4v3.5a2.5 2.5 0 0 0 5 0V4M7 10v10M16.5 4c-2 1.2-3 3.2-3 5.5 0 2 1.2 3.5 3 3.5V20M16.5 4V20'],
+      ['lists', 'Lists', 'M9.5 6.5h11M9.5 12h11M9.5 17.5h11M4 6.5l1.2 1.2 2.2-2.4M4 12l1.2 1.2 2.2-2.4M4 17.5l1.2 1.2 2.2-2.4'],
+      ['countdowns', 'Countdowns', 'M7 3.5h10v3.5l-4 5 4 5v3.5H7v-3.5l4-5-4-5z'],
+      ['sidekick', 'Sidekick', 'M12 4l1.5 4.5L18 10l-4.5 1.5L12 16l-1.5-4.5L6 10l4.5-1.5zM18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z'],
+      ['settings', 'Settings', 'M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7']
+    ];
+    const navItems = pages.map(p => {
+      const on = S.page === p[0];
+      const st = narrow
+        ? 'display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 6px;border-radius:14px;border:none;cursor:pointer;flex:1;font-family:inherit;font-size:.6em;font-weight:700;background:' + (on ? INK : 'none') + ';color:' + (on ? CREAM : 'rgba(35,42,61,.66)')
+        : 'display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:16px;border:none;cursor:pointer;font-family:inherit;font-size:.93em;font-weight:700;text-align:left;min-height:47px;width:100%;' + (mid ? 'justify-content:center;' : '') + 'background:' + (on ? INK : 'none') + ';color:' + (on ? CREAM : 'rgba(35,42,61,.7)');
+      return { k: p[0], label: p[1], d: p[2], st, ls: (narrow ? 'display:block' : mid ? 'display:none' : 'display:block'), go: () => this.go(p[0]) };
+    });
+    const railStyle = narrow
+      ? 'position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);border-top:1px solid rgba(35,42,61,.12);display:flex;flex-direction:row;padding:6px 8px calc(6px + env(safe-area-inset-bottom));z-index:60;box-shadow:0 -8px 24px -14px rgba(35,42,61,.3)'
+      : 'width:' + (mid ? '86px' : '236px') + ';flex-shrink:0;display:flex;flex-direction:column;gap:5px;padding:20px 14px;border-right:1px solid rgba(35,42,61,.1);background:rgba(255,255,255,.65);position:sticky;top:0;height:100vh;overflow:auto';
+    const hours = nowD.getHours();
+    const wxCur = S.wx && (this.props.showWeather ?? true) ? S.wx.cur : null;
+    const wxTd = S.wx && S.wx.dy[td];
+
+    // agenda for today page
+    const mkRow = e => ({
+      k: e.id + e.date, time: this.fmtT(e.start), title: e.title,
+      bar: e._c || this.dots(e.memberIds)[0].c, dots: e._c ? [{ c: e._c }] : this.dots(e.memberIds),
+      loc: e.loc || '', locDisp: e.loc ? 'block' : 'none',
+      st: 'display:flex;align-items:center;gap:12px;padding:7px 8px;border-radius:14px;cursor:pointer;transition:background .15s;min-height:46px;opacity:' + (e.date === td && e.start && e.start < (String(hours).padStart(2, '0') + ':' + String(nowD.getMinutes()).padStart(2, '0')) ? '.55' : '1'),
+      wxOn: !!this.wxAt(e.date, e.start), wD: (this.wxAt(e.date, e.start) || {}).d || '', wT: (this.wxAt(e.date, e.start) || {}).t || '',
+      rides: this.rideTags(e, true),
+      click: () => this.openEv(e)
+    });
+    const agenda = this.evsOn(td).map(mkRow);
+
+    const kidsMini = kids.map(k => {
+      const chs = d.chores.filter(c => c.memberIds.includes(k.id) && c.days.includes(dow));
+      const dn = chs.filter(c => (d.done[td] || {})[c.id + '|' + k.id]).length;
+      return { k: k.id, name: k.name, c: k.color, init: this.avI(k), avSt: this.avSt(k, 'width:36px;height:36px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:Outfit;font-weight:600'), doneN: dn, totN: chs.length, barW: (chs.length ? Math.round(dn / chs.length * 100) : 0) + '%', bal: bal[k.id] || 0, go: () => this.setState({ page: 'member', memSel: k.id }) };
+    });
+    const cdsAll = d.countdowns.map(c => ({ ...c, days: Math.max(0, Math.round((this.pd(c.date) - this.pd(td)) / 864e5)) })).filter(c => this.pd(c.date) >= this.pd(td)).sort((a, b) => a.days - b.days);
+
+    // calendar
+    const sow = off => { const dd = new Date(nowD); dd.setDate(dd.getDate() - ((dd.getDay() - ws + 7) % 7) + off * 7); return this.ymd(dd); };
+    const w0 = sow(S.wOff);
+    const weekDays = Array.from({ length: 7 }, (_, i) => {
+      const ds = this.ad(w0, i), isT = ds === td, dd = this.pd(ds);
+      const dyw = S.wx && S.wx.dy[ds];
+      return {
+        k: ds, head: dd.toLocaleDateString('en-US', { weekday: 'short' }), num: dd.getDate(),
+        numSt: 'font-family:Outfit;font-weight:600;font-size:1.1em;' + (isT ? 'background:' + INK + ';color:' + CREAM + ';border-radius:99px;padding:1px 9px' : ''),
+        colSt: 'background:#FFFFFF;border-radius:18px;display:flex;flex-direction:column;border:1.5px solid ' + (isT ? INK : 'rgba(35,42,61,.1)'),
+        hiLo: dyw && (this.props.showWeather ?? true) ? dyw.hi + '°/' + dyw.lo + '°' : '',
+        evs: this.evsOn(ds).map(e => ({
+          k: e.id + ds, timeS: this.fmtT(e.start), title: e.title, dots: e._c ? [{ c: e._c }] : this.dots(e.memberIds),
+          loc: e.loc || '', locDisp: e.loc ? 'block' : 'none', rides: this.rideTags(e, true),
+          st: 'border-radius:12px;padding:8px 10px;cursor:pointer;background:' + (e._c || this.dots(e.memberIds)[0].c) + '14;border-left:4px solid ' + (e._c || this.dots(e.memberIds)[0].c),
+          click: () => this.openEv(e)
+        })),
+        mealLine: d.mealPlan[ds] ? 'Dinner: ' + d.mealPlan[ds] : '', mealDisp: d.mealPlan[ds] ? 'block' : 'none'
+      };
+    });
+    const mBase = new Date(nowD.getFullYear(), nowD.getMonth() + S.mOff, 1);
+    const m0 = this.ymd(mBase); const mStartShift = (mBase.getDay() - ws + 7) % 7;
+    const g0 = this.ad(m0, -mStartShift);
+    const monthCells = Array.from({ length: 42 }, (_, i) => {
+      const ds = this.ad(g0, i), dd = this.pd(ds), inM = dd.getMonth() === mBase.getMonth(), isT = ds === td;
+      const evs = this.evsOn(ds);
+      return {
+        k: ds, num: dd.getDate(),
+        numSt: 'font-weight:700;font-size:.82em;margin-bottom:3px;' + (isT ? 'color:#F7F9FF;background:' + INK + ';border-radius:99px;width:24px;height:24px;display:flex;align-items:center;justify-content:center' : 'color:rgba(35,42,61,' + (inM ? '.8' : '.3') + ')'),
+        st: 'min-height:92px;border-radius:14px;padding:7px;cursor:pointer;background:' + (inM ? '#FFFFFF' : 'rgba(255,255,255,.4)') + ';border:1.5px solid ' + (isT ? INK : 'rgba(35,42,61,.08)'),
+        chips: evs.slice(0, 3).map(e => ({ k: e.id + ds, t: e.title, st: 'font-weight:700;font-size:.68em;border-radius:6px;padding:2px 6px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#232A3D;background:' + (e._c || this.dots(e.memberIds)[0].c) + '22;border-left:3px solid ' + (e._c || this.dots(e.memberIds)[0].c) })),
+        more: evs.length > 3 ? '+' + (evs.length - 3) + ' more' : '', moreDisp: evs.length > 3 ? 'block' : 'none',
+        click: () => this.setState({ dd: ds })
+      };
+    });
+    const dowNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const fAll = !S.fltr;
+    const fChips = [{ k: 'all', label: 'Everyone', c: FAM, st: chipSt(fAll), tog: () => this.setState({ fltr: null }) }]
+      .concat(d.members.map(m => ({ k: m.id, label: m.name, c: m.color, st: chipSt(!fAll && S.fltr.includes(m.id)), tog: () => this.setState(s => { let f = s.fltr ? [...s.fltr] : []; f = f.includes(m.id) ? f.filter(x => x !== m.id) : [...f, m.id]; return { fltr: f.length ? f : null }; }) })));
+    const calBtn = on => 'border:none;border-radius:999px;padding:9px 18px;font-weight:700;cursor:pointer;font-size:.88em;background:' + (on ? '#FFFFFF' : 'none') + ';color:' + INK + (on ? ';box-shadow:0 2px 8px rgba(35,42,61,.15)' : '');
+
+    // chores page
+    const kidCols = kids.map(k => {
+      const chs = d.chores.filter(c => c.memberIds.includes(k.id) && c.days.includes(dow));
+      const dn = chs.filter(c => (d.done[td] || {})[c.id + '|' + k.id]).length;
+      const pct = chs.length ? dn / chs.length : 0;
+      return {
+        k: k.id, name: k.name, c: k.color, init: this.avI(k), avSt: this.avSt(k, 'position:absolute;inset:10px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:Outfit;font-weight:600;font-size:1.25em'), bal: bal[k.id] || 0, go: () => this.setState({ page: 'member', memSel: k.id }),
+        meta: (k.age ? 'Age ' + k.age + ' · ' : '') + dn + '/' + chs.length + ' today', ring: (pct * 163.4).toFixed(1) + ' 999',
+        rows: chs.map(c => {
+          const on = !!(d.done[td] || {})[c.id + '|' + k.id];
+          return { k: c.id, title: c.title, ckSt: ck(on), ckD: on ? CKD : '', deco: on ? 'line-through' : 'none', op: on ? '.5' : '1', starsS: '+' + c.stars + ' ★',
+            tog: () => { this.setD(dd2 => { dd2.done[td] = dd2.done[td] || {}; const key = c.id + '|' + k.id; if (dd2.done[td][key]) delete dd2.done[td][key]; else dd2.done[td][key] = 1; }); if (!on) this.toast('+' + c.stars + ' ★ for ' + k.name + ' — nice!'); } };
+        })
+      };
+    });
+    const mngChores = d.chores.map(c => ({
+      k: c.id, title: c.title,
+      meta: c.memberIds.map(id => (this.mem(id) || {}).name).filter(Boolean).join(', ') + ' · ' + (c.days.length === 7 ? 'daily' : c.days.map(i => dowNames[i]).join(' ')) + ' · ' + c.stars + '★',
+      edit: () => this.setState({ ch: { id: c.id, t: c.title, mems: [...c.memberIds], days: [...c.days], stars: c.stars } }),
+      del: () => this.requirePin(() => { this.setD(dd2 => dd2.chores = dd2.chores.filter(x => x.id !== c.id)); this.toast('Chore removed'); })
+    }));
+    const rewards = d.rewards.map(r => ({ k: r.id, title: r.title, cost: r.cost, click: () => this.setState({ rd: r }) }));
+    const recent = d.redemptions.slice(-3).reverse().map(r => ((this.mem(r.kidId) || {}).name || '?') + ' — ' + r.title).join(' · ');
+
+    // meals
+    const mealDays = Array.from({ length: 7 }, (_, i) => {
+      const ds = this.ad(td, i), dd = this.pd(ds), name = d.mealPlan[ds];
+      return {
+        k: ds, dow: i === 0 ? 'Tonight' : dd.toLocaleDateString('en-US', { weekday: 'short' }), num: dd.getDate(),
+        st: 'text-align:left;background:#FFFFFF;border-radius:18px;padding:13px 14px;cursor:pointer;display:flex;flex-direction:column;gap:7px;min-height:96px;border:1.5px ' + (name ? 'solid rgba(35,42,61,.12)' : 'dashed rgba(35,42,61,.3)'),
+        name: name || '+ plan', nameSt: 'font-weight:700;font-size:.95em;line-height:1.3;color:' + (name ? '#1F8A5B' : 'rgba(35,42,61,.4)'),
+        pick: () => this.setState({ mp: ds, mpQ: '' })
+      };
+    });
+    const favs = d.favorites.map(f => ({
+      k: f.id, name: f.name, tag: f.tag || '', tagDisp: f.tag ? 'inline-block' : 'none',
+      plan: () => this.setState({ fd: f.name }),
+      del: () => this.setD(dd2 => dd2.favorites = dd2.favorites.filter(x => x.id !== f.id))
+    }));
+    const mpQ = S.mpQ.trim();
+    const mpList = d.favorites.filter(f => !mpQ || f.name.toLowerCase().includes(mpQ.toLowerCase())).map(f => ({
+      k: f.id, name: f.name, tag: f.tag || '', tagDisp: f.tag ? 'inline-block' : 'none',
+      pick: () => { this.setD(dd2 => dd2.mealPlan[S.mp] = f.name); this.setState({ mp: null }); }
+    }));
+    const fdDays = Array.from({ length: 7 }, (_, i) => {
+      const ds = this.ad(td, i), dd = this.pd(ds);
+      return { k: ds, l: (i === 0 ? 'Tonight' : dd.toLocaleDateString('en-US', { weekday: 'long' })) + ' ' + dd.getDate(), cur: d.mealPlan[ds] || 'open',
+        pick: () => { this.setD(dd2 => dd2.mealPlan[ds] = S.fd); this.setState({ fd: null }); this.toast(S.fd + ' planned!'); } };
+    });
+
+    // lists
+    const curList = d.lists.find(l => l.id === S.listSel) || d.lists[0];
+    const listTabs = d.lists.map(l => ({
+      k: l.id, name: l.name, count: l.items.filter(i => !i.done).length,
+      st: 'display:block;width:100%;text-align:left;border:none;border-radius:14px;padding:12px 14px;font-weight:700;cursor:pointer;font-size:.92em;margin-bottom:4px;background:' + (curList && l.id === curList.id ? INK : 'none') + ';color:' + (curList && l.id === curList.id ? CREAM : INK),
+      sel: () => this.setState({ listSel: l.id })
+    }));
+    const items = (curList ? curList.items : []).map(i => ({
+      k: i.id, text: i.text, ckSt: ck(i.done), ckD: i.done ? CKD : '', deco: i.done ? 'line-through' : 'none', op: i.done ? '.45' : '1',
+      by: (this.mem(i.by) || {}).color || FAM,
+      tog: () => this.setD(dd2 => { const it = dd2.lists.find(l => l.id === curList.id).items.find(x => x.id === i.id); it.done = !it.done; }),
+      del: () => this.setD(dd2 => { const l = dd2.lists.find(l2 => l2.id === curList.id); l.items = l.items.filter(x => x.id !== i.id); })
+    }));
+    const addItemFn = () => { const t = S.ni.trim(); if (!t || !curList) return; this.setD(dd2 => dd2.lists.find(l => l.id === curList.id).items.push({ id: this.u(), text: t, done: false, by: 'e' })); this.setState({ ni: '' }); };
+
+    // countdowns
+    const cds = cdsAll.map(c => {
+      const col = c.memberId ? (this.mem(c.memberId) || {}).color || FAM : FAM;
+      return { k: c.id, days: c.days === 0 ? '🎈' : c.days, unit: c.days === 0 ? "IT'S TODAY" : c.days === 1 ? 'DAY TO GO' : 'DAYS TO GO', title: c.title, dateS: this.fmtD(c.date), c: col,
+        st: 'text-align:center;background:linear-gradient(160deg,#FFFFFF,' + col + '14);border:1.5px solid ' + col + '55;border-radius:22px;padding:22px 16px;cursor:pointer',
+        edit: () => this.setState({ cd: { id: c.id, t: c.title, date: c.date, mem: c.memberId } }) };
+    });
+
+    // sidekick
+    const sk = S.sk;
+    const skEvs = sk.out ? sk.out.evs.map((e, i) => ({
+      k: 'e' + i, title: e.title, ckSt: ck(e.sel), ckD: e.sel ? CKD : '',
+      meta: this.fmtD(e.date) + (e.start ? ' · ' + this.fmtT(e.start) : '') + (e.members && e.members.length ? ' · ' + e.members.join(', ') : ' · Everyone') + (e.location ? ' · ' + e.location : ''),
+      tog: () => this.setState(s => { const o = { ...s.sk.out }; o.evs = o.evs.map((x, j) => j === i ? { ...x, sel: !x.sel } : x); return { sk: { ...s.sk, out: o } }; })
+    })) : [];
+    const skItems = sk.out ? sk.out.its.map((it, i) => ({
+      k: 'i' + i, text: it.text, meta: 'to “' + (it.list || 'To do') + '”', ckSt: ck(it.sel), ckD: it.sel ? CKD : '',
+      tog: () => this.setState(s => { const o = { ...s.sk.out }; o.its = o.its.map((x, j) => j === i ? { ...x, sel: !x.sel } : x); return { sk: { ...s.sk, out: o } }; })
+    })) : [];
+    const skN = sk.out ? sk.out.evs.filter(e => e.sel).length + sk.out.its.filter(i => i.sel).length : 0;
+
+    // settings
+    const SWATCH = ['#0F8B8D', '#3D6DE8', '#8B5CF6', '#31A05F', '#8A63C9', '#2E9E6B', '#7C5CE0', '#5B8DEF'];
+    const stMembers = d.members.map(m => ({
+      k: m.id, name: m.name, init: m.name[0] || '?', c: m.color, roleLbl: m.role === 'parent' ? 'Parent' : 'Kid',
+      onName: e => this.setD(dd2 => dd2.members.find(x => x.id === m.id).name = e.target.value),
+      roleTog: () => this.setD(dd2 => { const mm = dd2.members.find(x => x.id === m.id); mm.role = mm.role === 'parent' ? 'kid' : 'parent'; }),
+      del: () => this.requirePin(() => this.setD(dd2 => dd2.members = dd2.members.filter(x => x.id !== m.id))),
+      sw: SWATCH.map(c2 => ({ k: c2, st: 'width:26px;height:26px;border-radius:50%;cursor:pointer;background:' + c2 + ';border:2.5px solid ' + (m.color === c2 ? INK : 'transparent'), pick: () => this.setD(dd2 => dd2.members.find(x => x.id === m.id).color = c2) }))
+    }));
+    const feeds = d.settings.feeds.map(f => ({
+      k: f.id, name: f.name, url: f.url, color: f.color, status: f.status || '',
+      sync: () => this.syncFeed(f),
+      del: () => this.setD(dd2 => { dd2.settings.feeds = dd2.settings.feeds.filter(x => x.id !== f.id); if (dd2.feedEv) delete dd2.feedEv[f.id]; })
+    }));
+
+    // modals state
+    const ev = S.ev, chm = S.ch, rwm = S.rw, cdm = S.cd;
+    const memChips = (sel, tog) => d.members.map(m => ({ k: m.id, label: m.name, c: m.color, st: chipSt(sel.includes(m.id)), tog: () => tog(m.id) }));
+    const pinDots = [0, 1, 2, 3].map(i => ({ st: 'width:16px;height:16px;border-radius:50%;transition:all .15s;background:' + (S.pinE.length > i ? INK : 'rgba(35,42,61,.15)') }));
+    const pinPress = n => {
+      const e = S.pinE + n; if (e.length > 4) return;
+      if (e.length === 4) {
+        if (e === d.settings.pin) { const cb = S.pin.cb; this.setState({ pin: null, pinE: '', parentUntil: Date.now() + 5 * 60000 }); this.toast('Parent mode unlocked for 5 minutes'); cb && cb(); }
+        else this.setState(s => ({ pinE: '', pinErrN: s.pinErrN + 1 }));
+      } else this.setState({ pinE: e });
+    };
+
+    const mm = (S.page === 'member' && this.mem(S.memSel)) || d.members[0] || { name: '?', color: FAM, role: 'kid' };
+    const memIsKid = mm.role === 'kid';
+    const memRows = d.chores.filter(c => c.memberIds.includes(mm.id) && c.days.includes(dow)).map(c => {
+      const on = !!(d.done[td] || {})[c.id + '|' + mm.id];
+      return { k: c.id, title: c.title, ckSt: ck(on), ckD: on ? CKD : '', deco: on ? 'line-through' : 'none', op: on ? '.5' : '1', starsS: '+' + c.stars + ' ★',
+        tog: () => { this.setD(dd2 => { dd2.done[td] = dd2.done[td] || {}; const key = c.id + '|' + mm.id; if (dd2.done[td][key]) delete dd2.done[td][key]; else dd2.done[td][key] = 1; }); if (!on) this.toast('+' + c.stars + ' ★ for ' + mm.name + ' — nice!'); } };
+    });
+    const memAgenda = this.evsOn(td).filter(e => !e.memberIds || !e.memberIds.length || e.memberIds.includes(mm.id)).map(mkRow);
+    const memBalN = bal[mm.id] || 0;
+    const memRewards = d.rewards.map(r => ({ k: r.id, title: r.title, cost: r.cost, pw: Math.min(100, Math.round(memBalN / r.cost * 100)) + '%', note: memBalN >= r.cost ? 'Ready to redeem — tap!' : (r.cost - memBalN) + ' more ★ to go', click: () => this.setState({ rd: r }) }));
+    const memWeek = Array.from({ length: 7 }, (_, i) => { const ds = this.ad(td, -(6 - i)); const dd2 = d.done[ds] || {}; let earned = 0; Object.keys(dd2).forEach(kk => { const p = kk.split('|'); if (p[1] === mm.id) { const c = d.chores.find(x => x.id === p[0]); if (c) earned += c.stars; } }); return { k: ds, t: earned ? '+' + earned : '', h: earned ? Math.min(46, 10 + earned * 5) : 4, c: mm.color, op: earned ? '1' : '.25', l: dowNames[this.dowOf(ds)][0], lc: ds === td ? INK : 'rgba(35,42,61,.45)' }; });
+    const memCds = cdsAll.filter(c => !c.memberId || c.memberId === mm.id).slice(0, 4).map(c => ({ k: c.id, title: c.title, days: c.days, dateS: this.fmtD(c.date), c: c.memberId ? mm.color : FAM }));
+    const pf = d.preflight || { open: false, kids: {} };
+    const pfActive = !!pf.open && dow >= 1 && dow <= 5;
+    const dchip = on => 'width:36px;height:36px;border-radius:10px;border:1.5px solid ' + (on ? INK : 'rgba(35,42,61,.16)') + ';background:' + (on ? INK : '#FFF') + ';color:' + (on ? '#F7F9FF' : INK) + ';font-weight:700;cursor:pointer;font-size:.8em';
+    const dchipS = on => 'width:28px;height:28px;border-radius:8px;border:1.5px solid ' + (on ? INK : 'rgba(35,42,61,.16)') + ';background:' + (on ? INK : '#FFF') + ';color:' + (on ? '#F7F9FF' : INK) + ';font-weight:700;cursor:pointer;font-size:.68em';
+    const mkPfRows = k => this.pfRowsFor(k, dow).map(r => {
+      const on = !!r.key && !!(d.done[td] || {})[r.key + '|' + k.id];
+      return { k: r.key || 'inf', text: r.text, on, inf: !r.key,
+        rowSt: 'display:flex;align-items:center;gap:10px;padding:6px 3px;border-radius:12px;min-height:40px;cursor:' + (r.key ? 'pointer' : 'default'),
+        ckSt: r.key ? ck(on) : 'width:26px;height:26px;border-radius:9px;flex-shrink:0;border:2px dashed rgba(35,42,61,.2);background:none',
+        ckD: on ? CKD : '', deco: on ? 'line-through' : 'none', op: on ? '.55' : (r.key ? '1' : '.6'),
+        bd: r.badge || '', bdSt: r.badge ? 'font-weight:800;font-size:.62em;letter-spacing:.08em;border-radius:999px;padding:3px 8px;color:#FFF;background:' + (r.badge === 'GYM' ? '#22A06B' : '#3D6DE8') : 'display:none',
+        tog: r.key ? (() => this.setD(d2 => { d2.done[td] = d2.done[td] || {}; const kk = r.key + '|' + k.id; if (d2.done[td][kk]) delete d2.done[td][kk]; else d2.done[td][kk] = 1; })) : (() => {}) };
+    });
+    const pfKids = pfActive ? kids.map(k => { const rows = mkPfRows(k); const chk = rows.filter(r => !r.inf); const dn = chk.filter(r => r.on).length;
+      return { k: k.id, name: k.name, init: this.avI(k), avSt: this.avSt(k, 'width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:Outfit;font-weight:600;font-size:.9em'), c: k.color, rows, bc: k.color + '55',
+        prog: dn === chk.length && chk.length ? 'Ready!' : dn + '/' + chk.length,
+        progSt: 'font-weight:800;font-size:.78em;border-radius:999px;padding:4px 10px;' + (dn === chk.length && chk.length ? 'color:#FFF;background:#22A06B' : 'color:rgba(35,42,61,.6);background:rgba(35,42,61,.07)') };
+    }).filter(pk => pk.rows.length) : [];
+    let pfDn = 0, pfTt = 0; pfKids.forEach(pk => pk.rows.forEach(r => { if (!r.inf) { pfTt++; if (r.on) pfDn++; } }));
+    const pfMemRows = pfActive && memIsKid ? mkPfRows(mm) : [];
+    const pfDep = pf.depart || '07:30';
+    const depParts = pfDep.split(':'), depMins = (+depParts[0]) * 60 + (+depParts[1]);
+    const nowMins = nowD.getHours() * 60 + nowD.getMinutes(), depLeft = depMins - nowMins;
+    const depH = ((+depParts[0] + 11) % 12) + 1, depDisp = depH + ':' + depParts[1] + (+depParts[0] >= 12 ? ' PM' : ' AM');
+    let pfDepLbl = 'Leave by ' + depDisp, pfDepCss = 'color:rgba(35,42,61,.6);background:rgba(35,42,61,.07)';
+    if (depLeft <= 0 && depLeft > -180) { pfDepLbl = 'Departed · ' + depDisp; }
+    else if (depLeft <= 15 && depLeft > 0) { pfDepLbl = 'Leave in ' + depLeft + ' min!'; pfDepCss = 'color:#FFF;background:#D9435B;animation:pulseRing 1.6s infinite'; }
+    else if (depLeft <= 60 && depLeft > 0) { pfDepLbl = 'Leave in ' + depLeft + ' min · ' + depDisp; pfDepCss = 'color:#8A5A1E;background:rgba(226,146,74,.2)'; }
+    const th = this.kidTheme(mm);
+    const fitD = d.fit && d.fit[mm.id], gld = d.gl && d.gl[mm.id], ie = S.intEd;
+    const fm = v => '$' + (Math.round(v * 100) / 100).toFixed(2);
+    const fitStats = !fitD ? [] : fitD.kind === 'whoop' ? [
+      { k: 'sl', lbl: 'SLEEP PERFORMANCE', val: Math.round(fitD.sleep) + '%', c: '#35E3A0', w: Math.min(100, fitD.sleep) + '%', note: fitD.sleep >= 85 ? 'Great recovery fuel' : fitD.sleep >= 70 ? 'Solid night' : 'Early bedtime tonight?' },
+      { k: 'st', lbl: 'DAY STRAIN', val: (Math.round(fitD.strain * 10) / 10).toFixed(1), c: '#5FB8FF', w: Math.min(100, fitD.strain / 21 * 100) + '%', note: fitD.strain < 10 ? 'Light day so far' : fitD.strain < 15 ? 'Moderate effort' : 'Big output day' }
+    ] : [
+      { k: 'sl', lbl: 'SLEEP SCORE', val: Math.round(fitD.sleep) + '', c: '#79C7E3', w: Math.min(100, fitD.sleep) + '%', note: fitD.sleep >= 85 ? 'Excellent' : fitD.sleep >= 70 ? 'Good' : 'Take it easy today' },
+      { k: 'ac', lbl: 'ACTIVITY GOAL', val: Math.round(fitD.act) + '%', c: '#B9A6F1', w: Math.min(100, fitD.act) + '%', note: fitD.act >= 100 ? 'Goal crushed!' : 'Keep moving' }
+    ];
+    const ieF = (key, lbl, tp) => ({ k: key, lbl, v: ie.vals[key], tp: tp || 'number', on: e => this.setState(s => ({ intEd: { ...s.intEd, vals: { ...s.intEd.vals, [key]: e.target.value } } })) });
+    const ieFields = !ie ? [] : ie.type === 'gl' ? [ieF('bal', 'Balance ($)'), ieF('allow', 'Allowance ($ / week)'), ieF('goal', 'Savings goal', 'text'), ieF('goalCost', 'Goal cost ($)'), ieF('saved', 'Saved so far ($)')] : ie.type === 'whoop' ? [ieF('sleep', 'Sleep performance (%)'), ieF('strain', 'Day strain (0–21)')] : [ieF('sleep', 'Sleep score (0–100)'), ieF('act', 'Activity goal (%)')];
+    const QUOTES = [
+      ["You're braver than you believe, and stronger than you seem.", 'A. A. Milne'],
+      ['No act of kindness, no matter how small, is ever wasted.', 'Aesop'],
+      ['It always seems impossible until it is done.', 'Nelson Mandela'],
+      ['Do what you can, with what you have, where you are.', 'Theodore Roosevelt'],
+      ['The more that you read, the more things you will know.', 'Dr. Seuss'],
+      ['Fall seven times, stand up eight.', 'Japanese proverb'],
+      ['Little by little, one travels far.', 'Proverb'],
+      ['Mistakes are proof that you are trying.', 'Unknown'],
+      ['A little progress each day adds up to big results.', 'Unknown'],
+      ['Teamwork makes the dream work.', 'John C. Maxwell']
+    ];
+    const Q = QUOTES[Math.floor(Date.now() / 6048e5) % QUOTES.length];
+    const tdhCur = S.tdh && S.tdh.length ? S.tdh[S.tdhI % S.tdh.length] : null;
+    return {
+      quoteText: Q[0], quoteWho: Q[1],
+      tdhOn: !!tdhCur, tdhYear: tdhCur ? tdhCur.y : '', tdhAgo: tdhCur ? (nowD.getFullYear() - tdhCur.y) + ' YRS AGO' : '', tdhText: tdhCur ? tdhCur.t : '',
+      tdhMoreSt: tdhCur && S.tdh.length > 1 ? 'block' : 'none', tdhNext: () => this.setState(s => ({ tdhI: s.tdhI + 1 })),
+      tdhMsgOn: !tdhCur, tdhMsg: S.tdh ? 'No fact found for today — check back tomorrow!' : 'Digging up a fun fact…',
+      pfOn: pfActive && pfKids.length > 0, pfProg: pfDn + '/' + pfTt + ' ready', pfKids,
+      pfDepLbl, pfDepSt: 'display:inline-flex;align-items:center;gap:5px;font-weight:800;font-size:.82em;border-radius:999px;padding:5px 12px;' + pfDepCss,
+      pfDepVal: pfDep, pfDepSet: e => this.setD(d2 => { d2.preflight = d2.preflight || { open: true, kids: {} }; d2.preflight.depart = e.target.value || '07:30'; }),
+      pfMemOn: pfActive && memIsKid && pfMemRows.length > 0, pfMemRows,
+      pfOpenLbl: pf.open ? 'School is in session' : 'School is out', pfOpenSt: chipSt(!!pf.open),
+      pfOpenTog: () => this.setD(d2 => { d2.preflight = d2.preflight || { open: true, kids: {} }; d2.preflight.open = !d2.preflight.open; }),
+      pfKidsCfg: kids.map(k => { const cfg = (pf.kids || {})[k.id] || { gym: [], lun: [], bring: [] };
+        const wk = [1, 2, 3, 4, 5], DL = ['M', 'T', 'W', 'T', 'F'];
+        const dayTog = (field, i) => this.setD(d2 => { const c2 = this.pfCfg(d2, k.id); c2[field] = c2[field].includes(i) ? c2[field].filter(x => x !== i) : [...c2[field], i]; });
+        return { k: k.id, name: k.name, init: k.name[0], c: k.color,
+          gym: wk.map((i, j) => ({ k: i, l: DL[j], st: dchip((cfg.gym || []).includes(i)), tog: () => dayTog('gym', i) })),
+          lun: wk.map((i, j) => ({ k: i, l: DL[j], st: dchip((cfg.lun || []).includes(i)), tog: () => dayTog('lun', i) })),
+          items: (cfg.bring || []).map(b => ({ k: b.id, text: b.text,
+            days: wk.map((i, j) => ({ k: i, l: DL[j], st: dchipS((b.days || []).includes(i)), tog: () => this.setD(d2 => { const c2 = this.pfCfg(d2, k.id); const bb = c2.bring.find(x => x.id === b.id); if (bb) bb.days = (bb.days || []).includes(i) ? bb.days.filter(x => x !== i) : [...(bb.days || []), i]; }) })),
+            del: () => this.setD(d2 => { const c2 = this.pfCfg(d2, k.id); c2.bring = c2.bring.filter(x => x.id !== b.id); }) })),
+          nb: S.nb[k.id] || '', onNb: e => { const v = e.target.value; this.setState(s => ({ nb: { ...s.nb, [k.id]: v } })); },
+          addB: () => { const t = (S.nb[k.id] || '').trim(); if (!t) return; const d0 = Math.min(5, Math.max(1, dow)); this.setD(d2 => { const c2 = this.pfCfg(d2, k.id); c2.bring.push({ id: this.u(), text: t, days: [d0] }); }); this.setState(s => ({ nb: { ...s.nb, [k.id]: '' } })); } };
+      }),
+      pgMem: S.page === 'member', memName: mm.name, memInit: this.avI(mm), memC: mm.color, memTint: mm.color + '22',
+      memAvFull: this.avSt(mm, "width:72px;height:72px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:'Outfit';font-weight:600;font-size:2em;position:relative;z-index:1;border:2.5px solid rgba(255,255,255," + (th ? '.6' : '0') + ")"),
+      memHeroBg: th ? th.bg : 'linear-gradient(120deg,#FFFFFF,' + mm.color + '22)', memHeroFg: th ? th.fg : '#232A3D', memHeroSub: th ? th.sub : 'rgba(35,42,61,.6)',
+      memDeco: th ? th.deco : [], memTagOn: !!th, memTag: th ? th.tag : '', memAvBd: th ? '.6' : '0',
+      memBalSt: 'display:flex;align-items:center;gap:6px;font-weight:800;font-size:1.3em;color:#6D4FD1;border-radius:999px;padding:10px 20px;position:relative;z-index:1;background:' + (th ? 'rgba(247,249,255,.94)' : 'rgba(124,92,224,.16)'),
+      fitOn: !!fitD && mm.role === 'parent', fitBrand: fitD && fitD.kind === 'whoop' ? 'WHOOP' : 'ŌURA RING', fitAcc: fitD && fitD.kind === 'whoop' ? '#35E3A0' : '#79C7E3',
+      fitTitle: fitD ? mm.name + (fitD.kind === 'whoop' ? "'s recovery" : "'s readiness") : '', fitStats,
+      fitEdit: () => this.requirePin(() => this.setState({ intEd: { type: fitD.kind, mem: mm.id, vals: { sleep: fitD.sleep, strain: fitD.strain || '', act: fitD.act || '' } } }), 'Parent PIN to edit'),
+      fitConnect: () => this.toast('Live sync needs the official ' + (fitD && fitD.kind === 'whoop' ? 'WHOOP' : 'Oura') + ' API — sample data for now. Tap Edit to update.'),
+      glOn: memIsKid && !!gld, glBal: gld ? fm(gld.bal) : '', glAllow: gld ? fm(gld.allow) : '', glGoal: gld ? gld.goal : '', glSaved: gld ? fm(gld.saved) : '', glCost: gld ? fm(gld.goalCost) : '',
+      glPw: gld ? Math.min(100, gld.saved / Math.max(1, gld.goalCost) * 100) + '%' : '0%',
+      glNote: gld ? fm(Math.max(0, gld.goalCost - gld.saved)) + ' to go — about ' + Math.max(1, Math.ceil(Math.max(0, gld.goalCost - gld.saved) / Math.max(1, gld.allow))) + ' allowance weeks' : '',
+      glPays: gld ? gld.pay.map((p2, i2) => ({ k: 'gp' + i2, d: p2.d, for: p2.for, amt: '+' + fm(p2.amt) })) : [],
+      glEdit: () => this.requirePin(() => this.setState({ intEd: { type: 'gl', mem: mm.id, vals: { bal: gld.bal, allow: gld.allow, goal: gld.goal, goalCost: gld.goalCost, saved: gld.saved } } }), 'Parent PIN to edit'),
+      glConnect: () => this.toast("Greenlight doesn't offer a public sync yet — sample data for now. Tap Edit to update."),
+      ieOn: !!ie, ieHead: ie ? (ie.type === 'gl' ? 'Edit Greenlight' : ie.type === 'whoop' ? 'Edit WHOOP stats' : 'Edit Oura stats') : '', ieFields,
+      ieClose: () => this.setState({ intEd: null }),
+      ieSave: () => { const ied = this.state.intEd; if (!ied) return; const num = v => Math.max(0, parseFloat(v) || 0); this.setD(d2 => { if (ied.type === 'gl') Object.assign(d2.gl[ied.mem], { bal: num(ied.vals.bal), allow: num(ied.vals.allow), goal: String(ied.vals.goal || 'Savings goal'), goalCost: num(ied.vals.goalCost), saved: num(ied.vals.saved) }); else { const f2 = d2.fit[ied.mem]; f2.sleep = num(ied.vals.sleep); if (ied.type === 'whoop') f2.strain = num(ied.vals.strain); else f2.act = num(ied.vals.act); } }); this.setState({ intEd: null }); this.toast('Updated'); },
+      memMeta: (mm.role === 'parent' ? 'Parent' : 'Age ' + (mm.age || '—')) + (memIsKid && memRows.length ? ' · ' + memRows.filter(r => r.ckD).length + '/' + memRows.length + ' chores today' : ''),
+      memIsKid, memBal: memBalN, memDayTitle: mm.name + "'s day", memAgenda, memAgendaEmpty: !memAgenda.length,
+      memChoreRows: memRows, memChoresEmpty: !memRows.length, memRewards, memWeek, memCds, memCdsEmpty: !memCds.length,
+      rootFs: (narrow ? 15 : TV ? 21 : w >= 1560 ? 18 : 16),
+      railStyle, navItems,
+      brandStyle: narrow ? 'display:none' : 'display:flex;align-items:center;gap:10px;padding:6px 8px 18px;' + (mid ? 'justify-content:center' : ''),
+      brandLbl: (mid || narrow) ? 'display:none' : 'display:block;font-family:Outfit;font-weight:600;font-size:1.05em;line-height:1.1',
+      famRowStyle: narrow ? 'display:none' : 'display:flex;gap:6px;flex-wrap:wrap;margin-top:auto;padding:14px 6px 4px;' + (mid ? 'justify-content:center' : ''),
+      famDots: d.members.map(m => ({ st: this.avSt(m, "width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#F7F9FF;font-family:'Outfit';font-weight:600;font-size:13px;border:none;cursor:pointer;padding:0"), i: this.avI(m), n: m.name, go: () => this.setState({ page: 'member', memSel: m.id }) })),
+      headerStyle: 'display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:' + (narrow ? '16px 16px 10px' : '24px 30px 14px') + ';max-width:1560px;width:100%;margin:0 auto',
+      contentStyle: 'padding:' + (narrow ? '4px 16px 110px' : '6px 30px 44px') + ';max-width:1560px;width:100%;margin:0 auto',
+      pageTitle: S.page === 'member' ? mm.name + "'s page" : ({ today: "Carberry Command Center", calendar: 'Calendar', chores: 'Chores & Stars', meals: 'Meal Plan', lists: 'Lists', countdowns: 'Countdowns', sidekick: 'Sidekick', settings: 'Settings' })[S.page],
+      dateLong: nowD.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
+      clockStr: nowD.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      wxHead: !!wxCur && !narrow && S.page !== 'today', wxHeadD: wxCur ? this.wxD(wxCur.c) : '', wxHeadT: wxCur ? wxCur.t + '°' : '', wxHiLo: wxTd ? wxTd.hi + '°/' + wxTd.lo + '°' : '',
+      onMic: () => this.startVoice(),
+      micStyle: 'width:46px;height:46px;border-radius:50%;border:1.5px solid rgba(35,42,61,.16);background:#FFFFFF;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#232A3D',
+      lockOpen: Date.now() < S.parentUntil, lockShut: Date.now() >= S.parentUntil,
+      onLock: () => { if (Date.now() < S.parentUntil) { this.setState({ parentUntil: 0 }); this.toast('Parent mode locked'); } else this.requirePin(() => {}); },
+      lockStyle: 'width:46px;height:46px;border-radius:50%;border:1.5px solid ' + (Date.now() < S.parentUntil ? '#22A06B' : 'rgba(35,42,61,.16)') + ';background:' + (Date.now() < S.parentUntil ? 'rgba(34,160,107,.1)' : '#FFFFFF') + ';cursor:pointer;display:flex;align-items:center;justify-content:center;color:' + (Date.now() < S.parentUntil ? '#22A06B' : '#232A3D'),
+      pgToday: S.page === 'today', pgCal: S.page === 'calendar', pgChores: S.page === 'chores', pgMeals: S.page === 'meals', pgLists: S.page === 'lists', pgCds: S.page === 'countdowns', pgSk: S.page === 'sidekick', pgSet: S.page === 'settings',
+      greet: (hours < 12 ? 'Good morning' : hours < 17 ? 'Good afternoon' : 'Good evening') + '!',
+      heroSub: agenda.length ? agenda.length + ' thing' + (agenda.length === 1 ? '' : 's') + ' on the calendar today' + (d.mealPlan[td] ? ' · ' + d.mealPlan[td] + ' tonight' : '') : 'A wide-open day' + (d.mealPlan[td] ? ' · ' + d.mealPlan[td] + ' tonight' : ''),
+      wxBig: !!wxCur, wxBigD: wxCur ? this.wxD(wxCur.c) : '', wxBigT: wxCur ? wxCur.t + '°' : '', wxBigHiLo: wxTd ? 'H ' + wxTd.hi + '° · L ' + wxTd.lo + '°' : '', wxPlace: d.settings.place,
+      todayCols: narrow || mid ? '1fr' : '1.6fr 1fr',
+      agenda, agendaEmpty: !agenda.length,
+      onAddEventT: () => this.setState({ ev: { t: '', date: td, start: '', dur: '', loc: '', mems: [], rec: false } }),
+      kidsMini, goChores: () => this.go('chores'), goMeals: () => this.go('meals'), goCds: () => this.go('countdowns'),
+      dinT: d.mealPlan[td] || 'nothing yet — tap Plan!', dinTo: d.mealPlan[this.ad(td, 1)] || 'open',
+      cdMini: cdsAll.slice(0, 2).map(c => ({ k: c.id, title: c.title, days: c.days, dateS: this.fmtD(c.date), c: c.memberId ? (this.mem(c.memberId) || {}).color || FAM : FAM })),
+      // calendar
+      isWeek: S.calView === 'week', isMonth: S.calView === 'month',
+      calWeekSt: calBtn(S.calView === 'week'), calMonthSt: calBtn(S.calView === 'month'),
+      onCalWeek: () => this.setState({ calView: 'week' }), onCalMonth: () => this.setState({ calView: 'month' }),
+      onPrev: () => this.setState(s => s.calView === 'week' ? { wOff: s.wOff - 1 } : { mOff: s.mOff - 1 }),
+      onNext: () => this.setState(s => s.calView === 'week' ? { wOff: s.wOff + 1 } : { mOff: s.mOff + 1 }),
+      onToday0: () => this.setState({ wOff: 0, mOff: 0 }),
+      calLabel: S.calView === 'week' ? this.pd(w0).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' – ' + this.pd(this.ad(w0, 6)).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : mBase.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      fChips, onAddEvent: () => this.setState({ ev: { t: '', date: td, start: '', dur: '', loc: '', mems: [], rec: false } }),
+      weekDays, monthCells, mh: Array.from({ length: 7 }, (_, i) => ({ l: dowNames[(i + ws) % 7] })),
+      ddOn: !!S.dd, ddTitle: S.dd ? this.pd(S.dd).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }) : '',
+      ddEvs: S.dd ? this.evsOn(S.dd).map(mkRow) : [], ddEmpty: S.dd ? !this.evsOn(S.dd).length : false,
+      ddAdd: () => this.setState({ ev: { t: '', date: S.dd, start: '', dur: '', loc: '', mems: [], rec: false }, dd: null }),
+      ddClose: () => this.setState({ dd: null }),
+      // event modal
+      evOn: !!ev, evHead: ev && ev.id ? 'Edit event' : 'New event',
+      evT: ev ? ev.t : '', onEvT: e => this.setState(s => ({ ev: { ...s.ev, t: e.target.value } })),
+      evDate: ev ? ev.date : td, onEvDate: e => this.setState(s => ({ ev: { ...s.ev, date: e.target.value } })),
+      evStart: ev ? ev.start : '', onEvStart: e => this.setState(s => ({ ev: { ...s.ev, start: e.target.value } })),
+      evDur: ev ? ev.dur : '', onEvDur: e => this.setState(s => ({ ev: { ...s.ev, dur: e.target.value.replace(/\D/g, '') } })),
+      evLoc: ev ? ev.loc : '', onEvLoc: e => this.setState(s => ({ ev: { ...s.ev, loc: e.target.value } })),
+      evMems: ev ? memChips(ev.mems, id => this.setState(s => ({ ev: { ...s.ev, mems: s.ev.mems.includes(id) ? s.ev.mems.filter(x => x !== id) : [...s.ev.mems, id] } }))) : [],
+      evRecSt: chipSt(!!(ev && ev.rec)), onEvRec: () => this.setState(s => ({ ev: { ...s.ev, rec: !s.ev.rec } })),
+      evDrop: this.rideChips(ev, 'drop', chipSt), evPick: this.rideChips(ev, 'pick', chipSt),
+      evSave: () => {
+        const e2 = this.state.ev; if (!e2 || !e2.t.trim() || !e2.date) { this.toast('Give it a name and a date'); return; }
+        this.setD(dd2 => {
+          const rec = e2.rec ? 'weekly' : null, dur = e2.dur ? +e2.dur : null;
+          if (e2.id) { const x = dd2.events.find(v => v.id === e2.id); if (x) Object.assign(x, { title: e2.t.trim(), date: e2.date, start: e2.start || null, dur, loc: e2.loc, memberIds: e2.mems, recur: rec, drop: e2.drop || null, pick: e2.pick || null }); }
+          else dd2.events.push({ id: this.u(), title: e2.t.trim(), date: e2.date, start: e2.start || null, dur, loc: e2.loc, memberIds: e2.mems, recur: rec, drop: e2.drop || null, pick: e2.pick || null });
+        });
+        this.setState({ ev: null }); this.toast('Saved to the family calendar');
+      },
+      evDel: () => { const id = this.state.ev.id; this.requirePin(() => { this.setD(dd2 => dd2.events = dd2.events.filter(x => x.id !== id)); this.setState({ ev: null }); this.toast('Event deleted'); }, 'Deleting needs a parent'); },
+      evDelSt: ev && ev.id ? 'block' : 'none', evClose: () => this.setState({ ev: null }),
+      eatClick: e => e.stopPropagation(),
+      // chores
+      kidCols, onManage: () => { if (S.pin) return; this.requirePin(() => this.setState({ mng: !S.mng }), 'Managing chores is parent-only'); },
+      manageLbl: S.mng ? 'Done managing' : 'Manage (parent)', mng: !!S.mng,
+      mngChores, onNewChore: () => this.setState({ ch: { t: '', mems: kids.map(k => k.id), days: [0, 1, 2, 3, 4, 5, 6], stars: 1 } }),
+      onNewReward: () => this.setState({ rw: { t: '', cost: 10 } }),
+      rewards, recentRd: recent, recentDisp: recent ? 'block' : 'none',
+      chOn: !!chm, chHead: chm && chm.id ? 'Edit chore' : 'New chore',
+      chT: chm ? chm.t : '', onChT: e => this.setState(s => ({ ch: { ...s.ch, t: e.target.value } })),
+      chMems: chm ? memChips(chm.mems, id => this.setState(s => ({ ch: { ...s.ch, mems: s.ch.mems.includes(id) ? s.ch.mems.filter(x => x !== id) : [...s.ch.mems, id] } }))) : [],
+      chDays: chm ? dowNames.map((l, i) => ({ k: i, l, st: chipSt(chm.days.includes(i)), tog: () => this.setState(s => ({ ch: { ...s.ch, days: s.ch.days.includes(i) ? s.ch.days.filter(x => x !== i) : [...s.ch.days, i] } })) })) : [],
+      chStars: chm ? chm.stars : 1, chUp: () => this.setState(s => ({ ch: { ...s.ch, stars: Math.min(10, s.ch.stars + 1) } })), chDn: () => this.setState(s => ({ ch: { ...s.ch, stars: Math.max(1, s.ch.stars - 1) } })),
+      chSave: () => { const c = this.state.ch; if (!c.t.trim() || !c.mems.length || !c.days.length) { this.toast('Needs a name, a person, and a day'); return; }
+        this.setD(dd2 => { if (c.id) { const x = dd2.chores.find(v => v.id === c.id); Object.assign(x, { title: c.t.trim(), memberIds: c.mems, days: c.days.sort(), stars: c.stars }); } else dd2.chores.push({ id: this.u(), title: c.t.trim(), memberIds: c.mems, days: c.days.sort(), stars: c.stars }); });
+        this.setState({ ch: null }); this.toast('Chore saved'); },
+      chDel: () => { const id = this.state.ch.id; this.setD(dd2 => dd2.chores = dd2.chores.filter(x => x.id !== id)); this.setState({ ch: null }); },
+      chDelSt: chm && chm.id ? 'block' : 'none', chClose: () => this.setState({ ch: null }),
+      rwOn: !!rwm, rwHead: rwm && rwm.id ? 'Edit reward' : 'New reward',
+      rwT: rwm ? rwm.t : '', onRwT: e => this.setState(s => ({ rw: { ...s.rw, t: e.target.value } })),
+      rwCost: rwm ? rwm.cost : 10, rwUp: () => this.setState(s => ({ rw: { ...s.rw, cost: s.rw.cost + 1 } })), rwDn: () => this.setState(s => ({ rw: { ...s.rw, cost: Math.max(1, s.rw.cost - 1) } })),
+      rwSave: () => { const r = this.state.rw; if (!r.t.trim()) return; this.setD(dd2 => { if (r.id) Object.assign(dd2.rewards.find(v => v.id === r.id), { title: r.t.trim(), cost: r.cost }); else dd2.rewards.push({ id: this.u(), title: r.t.trim(), cost: r.cost }); }); this.setState({ rw: null }); },
+      rwDel: () => { const id = this.state.rw.id; this.setD(dd2 => dd2.rewards = dd2.rewards.filter(x => x.id !== id)); this.setState({ rw: null }); },
+      rwDelSt: rwm && rwm.id ? 'block' : 'none', rwClose: () => this.setState({ rw: null }),
+      rdOn: !!S.rd, rdTitle: S.rd ? S.rd.title : '', rdCost: S.rd ? S.rd.cost : 0,
+      rdKids: S.rd ? kids.map(k => { const b = bal[k.id] || 0, ok = b >= S.rd.cost; return {
+        k: k.id, name: k.name, c: k.color, init: k.name[0], bal: b, note: ok ? 'Can afford it!' : 'Needs ' + (S.rd.cost - b) + ' more ★',
+        st: 'display:flex;align-items:center;gap:11px;width:100%;border-radius:16px;padding:11px 13px;margin-bottom:7px;cursor:' + (ok ? 'pointer' : 'not-allowed') + ';border:1.5px solid rgba(35,42,61,.13);background:#FFFFFF;opacity:' + (ok ? '1' : '.45'),
+        pick: () => { if (!ok) { this.toast(k.name + ' needs ' + (S.rd.cost - b) + ' more ★'); return; }
+          const rd = S.rd; this.requirePin(() => { this.setD(dd2 => dd2.redemptions.push({ id: this.u(), kidId: k.id, title: rd.title, cost: rd.cost, ts: Date.now() })); this.setState({ rd: null }); this.toast(k.name + ' redeemed “' + rd.title + '” — enjoy!'); }, 'A parent approves redemptions'); } }; }) : [],
+      rdClose: () => this.setState({ rd: null }),
+      // meals
+      mealDays, favs, favN: S.favN, onFavN: e => this.setState({ favN: e.target.value }),
+      addFav: () => { const n = S.favN.trim(); if (!n) return; this.setD(dd2 => dd2.favorites.push({ id: this.u(), name: n, tag: '' })); this.setState({ favN: '' }); },
+      mpOn: !!S.mp, mpTitle: S.mp ? 'Dinner for ' + this.fmtD(S.mp) : '', mpQ: S.mpQ, onMpQ: e => this.setState({ mpQ: e.target.value }),
+      mpList, mpCustomDisp: mpQ && !d.favorites.some(f => f.name.toLowerCase() === mpQ.toLowerCase()) ? 'block' : 'none',
+      mpUseCustom: () => { this.setD(dd2 => dd2.mealPlan[S.mp] = mpQ); this.setState({ mp: null }); },
+      mpClearDisp: S.mp && d.mealPlan[S.mp] ? 'block' : 'none',
+      mpClear: () => { this.setD(dd2 => delete dd2.mealPlan[S.mp]); this.setState({ mp: null }); },
+      mpClose: () => this.setState({ mp: null }),
+      fdOn: !!S.fd, fdName: S.fd || '', fdDays, fdClose: () => this.setState({ fd: null }),
+      // lists
+      listCols: narrow ? '1fr' : '230px 1fr',
+      listTabs, nl: S.nl, onNl: e => this.setState({ nl: e.target.value }),
+      addList: () => { const n = S.nl.trim(); if (!n) return; const id = this.u(); this.setD(dd2 => dd2.lists.push({ id, name: n, items: [] })); this.setState({ nl: '', listSel: id }); },
+      curName: curList ? curList.name : 'No lists', itemsEmpty: curList ? !curList.items.length : true, items,
+      ni: S.ni, onNi: e => this.setState({ ni: e.target.value }), onNiKey: e => { if (e.key === 'Enter') addItemFn(); }, addItem: addItemFn,
+      clearDone: () => curList && this.setD(dd2 => { const l = dd2.lists.find(x => x.id === curList.id); l.items = l.items.filter(i => !i.done); }),
+      delList: () => curList && this.requirePin(() => { this.setD(dd2 => dd2.lists = dd2.lists.filter(x => x.id !== curList.id)); this.setState(s => ({ listSel: (s.d.lists[0] || {}).id || null })); }, 'Deleting a list is parent-only'),
+      // countdowns
+      cds, cdsEmpty: !cds.length, onNewCd: () => this.setState({ cd: { t: '', date: this.ad(td, 7), mem: null } }),
+      cdOn: !!cdm, cdHead: cdm && cdm.id ? 'Edit countdown' : 'New countdown',
+      cdT: cdm ? cdm.t : '', onCdT: e => this.setState(s => ({ cd: { ...s.cd, t: e.target.value } })),
+      cdDate: cdm ? cdm.date : '', onCdDate: e => this.setState(s => ({ cd: { ...s.cd, date: e.target.value } })),
+      cdMems: cdm ? [{ k: 'fam', label: 'Everyone', c: FAM, st: chipSt(!cdm.mem), tog: () => this.setState(s => ({ cd: { ...s.cd, mem: null } })) }].concat(d.members.map(m => ({ k: m.id, label: m.name, c: m.color, st: chipSt(cdm.mem === m.id), tog: () => this.setState(s => ({ cd: { ...s.cd, mem: m.id } })) }))) : [],
+      cdSave: () => { const c = this.state.cd; if (!c.t.trim() || !c.date) return; this.setD(dd2 => { if (c.id) Object.assign(dd2.countdowns.find(v => v.id === c.id), { title: c.t.trim(), date: c.date, memberId: c.mem }); else dd2.countdowns.push({ id: this.u(), title: c.t.trim(), date: c.date, memberId: c.mem }); }); this.setState({ cd: null }); },
+      cdDel: () => { const id = this.state.cd.id; this.setD(dd2 => dd2.countdowns = dd2.countdowns.filter(x => x.id !== id)); this.setState({ cd: null }); },
+      cdDelSt: cdm && cdm.id ? 'block' : 'none', cdClose: () => this.setState({ cd: null }),
+      // sidekick
+      skIn: sk.in, onSkIn: e => this.setState(s => ({ sk: { ...s.sk, in: e.target.value } })),
+      skGo: () => this.skRun(), skGoSt: 'background:#232A3D;color:#F7F9FF;border:none;border-radius:999px;padding:12px 24px;font-weight:700;cursor:pointer;font-size:.95em;opacity:' + (sk.in.trim() && !sk.busy ? '1' : '.5'),
+      skBusy: sk.busy, skErrOn: !!sk.err, skErr: sk.err || '',
+      skOut: !!sk.out, skEvs, skItems, skAdd: () => this.skCommit(), skAddLbl: 'Add ' + skN + ' selected',
+      skClear: () => this.setState(s => ({ sk: { ...s.sk, out: null } })),
+      skSample: () => this.setState(s => ({ sk: { ...s.sk, in: "Hi Panther families! Reminder: Cannon's swim team has a meet this Saturday at 8:30am at Claude Moore Park — arrive 20 minutes early. Hadley's soccer picture day moved to next Wednesday at 5:30pm on Field 3. Please send your student with: sunscreen, a water bottle, and a folding chair. The book fair runs Monday–Friday next week; send $10 if you'd like your child to shop." } })),
+      // settings
+      stMembers, addMember: () => this.setD(dd2 => dd2.members.push({ id: this.u(), name: 'New member', role: 'kid', color: '#2E9E6B' })),
+      zip: d.settings.zip, onZip: e => this.setD(dd2 => dd2.settings.zip = e.target.value), zipGo: () => this.geocode(), zipMsg: S.zipMsg || d.settings.place,
+      feeds, nfName: S.nf.name, nfUrl: S.nf.url,
+      onNfName: e => this.setState(s => ({ nf: { ...s.nf, name: e.target.value } })), onNfUrl: e => this.setState(s => ({ nf: { ...s.nf, url: e.target.value } })),
+      addFeed: () => { const n = S.nf; if (!n.url.trim()) return; this.setD(dd2 => dd2.settings.feeds.push({ id: this.u(), name: n.name.trim() || 'Calendar feed', url: n.url.trim(), color: '#5B8DEF', status: 'Not synced yet' })); this.setState({ nf: { name: '', url: '' } }); },
+      pinN: S.pinN, onPinN: e => this.setState({ pinN: e.target.value.replace(/\D/g, '').slice(0, 4) }),
+      savePin: () => { if (S.pinN.length !== 4) { this.toast('PIN must be 4 digits'); return; } this.setD(dd2 => dd2.settings.pin = S.pinN); this.setState({ pinN: '' }); this.toast('PIN updated'); },
+      resetAll: () => { const fresh = this.mig(this.seed()); this.setState({ d: fresh, listSel: fresh.lists[0].id }); this.toast('Demo data reset'); this.loadWx(); },
+      // pin modal
+      pinOn: !!S.pin, pinMsg: S.pin ? S.pin.msg : '', pinDots,
+      pinPanelSt: 'background:#FFFFFF;border-radius:26px;padding:28px;width:330px;max-width:100%;box-shadow:0 30px 70px -30px rgba(20,25,43,.6);animation:' + (S.pinErrN % 2 ? 'shakeA' : 'shakeB') + ' .4s ease,fadeUp .25s ease',
+      pinKeys: [1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => ({ k: n, l: n, press: () => pinPress(String(n)) })),
+      pinZero: () => pinPress('0'), pinBack: () => this.setState(s => ({ pinE: s.pinE.slice(0, -1) })),
+      pinCancel: () => this.setState({ pin: null, pinE: '' }),
+      // voice
+      vOn: !!S.vc, vStatus: S.vc ? S.vc.status : '', vText: S.vc ? (S.vc.text ? '“' + S.vc.text.replace(/^“|”$/g, '') + '”' : '') : '',
+      vReplyOn: !!(S.vc && S.vc.reply), vReply: S.vc && S.vc.reply || '',
+      vBigSt: 'width:72px;height:72px;border-radius:50%;margin:0 auto;display:flex;align-items:center;justify-content:center;background:#7C5CE0;' + (S.vc && S.vc.status === 'Listening…' ? 'animation:pulseRing 1.6s ease-out infinite' : ''),
+      vClose: () => { if (this.recog) try { this.recog.abort(); } catch (e) {} this.setState({ vc: null }); },
+      // toast
+      toastOn: !!S.toast, toastT: S.toast ? S.toast.t : ''
+    };
+  }
+}
+</script>
+</body>
+</html>
