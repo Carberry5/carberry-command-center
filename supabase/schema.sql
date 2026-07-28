@@ -637,9 +637,19 @@ declare
     'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts'
   ];
 begin
-  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    raise notice 'supabase_realtime publication absent — skipping (not a Supabase database)';
+  -- The `realtime` schema is the reliable "am I on Supabase?" tell; a plain
+  -- Postgres cluster (including the local test one) has no such schema even
+  -- with local-shim.sql applied.
+  if not exists (select 1 from pg_namespace where nspname = 'realtime') then
+    raise notice 'no realtime schema — skipping publication setup (not a Supabase database)';
     return;
+  end if;
+
+  -- Normally Supabase ships this publication, but not every project has it.
+  -- Without it there is nothing to subscribe to and cloudSync goes quiet.
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    create publication supabase_realtime;
+    raise notice 'created the supabase_realtime publication';
   end if;
 
   foreach t in array watched loop
