@@ -326,7 +326,12 @@ const bySort = (a: Row, b: Row) => num(a.sort_order) - num(b.sort_order)
 /** Postgres `date` arrives as "YYYY-MM-DD"; guard against a full timestamp. */
 const day = (v: unknown): string => str(v).slice(0, 10)
 
-export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
+/**
+ * `feedEvents` is passed separately rather than living in TableRows: those rows
+ * are written only by the scheduled ICS sync, and keeping them out of the
+ * writable set means the differ can never generate a write for them.
+ */
+export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = []): FamilyData {
   const hh = rows.households[0] ?? {}
 
   const members: Member[] = [...rows.members].sort(bySort).map((r) => ({
@@ -478,6 +483,22 @@ export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
     payByMember.set(str(r.member_id), list)
   })
 
+  // Read-only, keyed by feed id, in the shape selectors.ts already merges into
+  // the calendar alongside the family's own events.
+  const feedEv: Record<string, FamilyEvent[]> = {}
+  for (const r of [...feedEvents].sort(bySort)) {
+    ;(feedEv[str(r.feed_id)] ??= []).push({
+      id: str(r.id),
+      title: str(r.title),
+      date: day(r.date),
+      start: r.start_time == null ? null : str(r.start_time),
+      dur: r.dur == null ? null : num(r.dur),
+      memberIds: [],
+      loc: str(r.loc),
+      recur: r.recur === 'weekly' ? 'weekly' : null,
+    })
+  }
+
   const gl: Record<string, Greenlight> = {}
   rows.greenlight.forEach((r) => {
     const mid = str(r.member_id)
@@ -512,8 +533,7 @@ export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
       place: str(hh.place),
       feeds,
     },
-    // Feed events are a cache, never persisted — the ICS sync repopulates them.
-    feedEv: {},
+    feedEv,
     preflight,
     fit,
     gl,
@@ -683,7 +703,15 @@ export async function loadSnapshot(householdId: string, base: FamilyData): Promi
   )
 
   for (const [table, data] of results) rows[table] = data
-  return fromRows(rows, base)
+
+  // Read-only: written by the scheduled ICS sync, never by a device.
+  const { data: feedEvents, error: feErr } = await sb
+    .from('feed_events')
+    .select('*')
+    .eq('household_id', householdId)
+  if (feErr) throw new Error(`feed_events: ${feErr.message}`)
+
+  return fromRows(rows, base, (feedEvents ?? []) as Row[])
 }
 
 // ---------------------------------------------------------------------------
@@ -829,7 +857,10 @@ export function subscribe(
     // supabase-js already prefixes topics with "realtime:", and a second
     // separator is not worth risking in the server's topic routing.
     let ch = sb.channel(`household-${householdId}-${++channelSeq}`)
-    for (const table of WRITE_ORDER) {
+    // feed_events is read-only to the client but still worth watching: when the
+    // scheduled ICS sync lands new school events, the calendar should pick them
+    // up without anyone reloading.
+    for (const table of [...WRITE_ORDER, 'feed_events'] as const) {
       ch = ch.on(
         'postgres_changes',
         {

@@ -1,0 +1,63 @@
+name: Sync ICS feeds
+
+# Fetches each household's school / activity calendars and writes the events
+# into Supabase. This runs server-side because school calendars refuse browser
+# requests — no amount of client code can work around that.
+#
+# Setup: Settings -> Secrets and variables -> Actions -> Secrets, add
+#   SUPABASE_SERVICE_ROLE_KEY
+#
+# A real secret this time, not a variable: it bypasses RLS and writes on behalf
+# of every household. It is never given a VITE_ prefix and never reaches the
+# browser bundle. SUPABASE_URL is read from the same repository variable the
+# site build uses.
+
+on:
+  schedule:
+    # Every three hours. School calendars change on the order of days, so this
+    # is already generous; the cost of being wrong is a stale event, not a
+    # missed one.
+    - cron: '17 */3 * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Fetch and report without writing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sync-feeds
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Sync
+        env:
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::error::VITE_SUPABASE_URL variable is not set."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set."
+            echo "::error::Settings -> Secrets and variables -> Actions -> Secrets."
+            echo "::error::Use the service_role key — the anon key cannot write feed_events."
+            exit 1
+          fi
+          npx tsx scripts/sync-feeds.ts ${{ inputs.dry_run && '--dry-run' || '' }}

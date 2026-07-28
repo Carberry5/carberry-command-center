@@ -142,4 +142,48 @@ select pg_temp.expect_count('unauthenticated session sees no members',
   (select count(*) from public.members), 0);
 reset role;
 
+
+-- --- feed_events: readable by the household, never writable from a device ---
+
+insert into public.feeds (id, household_id, name, url) values ('f_a', 'hh_a', 'School', 'https://x/y.ics');
+insert into public.feed_events (id, household_id, feed_id, title, date)
+  values ('fe_a', 'hh_a', 'f_a', 'Early release', current_date);
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000a', false);
+select pg_temp.expect_count('A can read its feed events',
+  (select count(*) from public.feed_events), 1);
+
+do $$
+begin
+  insert into public.feed_events (id, household_id, feed_id, title, date)
+  values ('fe_evil', 'hh_a', 'f_a', 'Injected', current_date);
+  raise exception 'FAIL: a device could INSERT feed events';
+exception
+  when insufficient_privilege then raise notice 'ok: device cannot INSERT feed events';
+end $$;
+
+do $$
+begin
+  update public.feed_events set title = 'Tampered' where id = 'fe_a';
+  raise exception 'FAIL: a device could UPDATE feed events';
+exception
+  when insufficient_privilege then raise notice 'ok: device cannot UPDATE feed events';
+end $$;
+
+do $$
+begin
+  delete from public.feed_events where id = 'fe_a';
+  raise exception 'FAIL: a device could DELETE feed events';
+exception
+  when insufficient_privilege then raise notice 'ok: device cannot DELETE feed events';
+end $$;
+reset role;
+
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000000b', false);
+select pg_temp.expect_count('B cannot see A''s feed events',
+  (select count(*) from public.feed_events), 0);
+reset role;
+
 \echo 'ALL RLS CHECKS PASSED'

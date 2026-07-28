@@ -264,6 +264,27 @@ create table if not exists public.feeds (
 
 create index if not exists feeds_household_idx on public.feeds(household_id);
 
+-- Events pulled from ICS feeds. Written only by the scheduled sync (service
+-- role) and read-only to the browser — hence its own policy below rather than
+-- the shared read/write one, and its absence from cloudSync's WRITE_ORDER.
+-- They are a cache: the sync replaces a feed's rows wholesale each run, so
+-- nothing here is authored by anyone and nothing is lost by discarding it.
+create table if not exists public.feed_events (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  feed_id      text not null references public.feeds(id) on delete cascade,
+  title        text not null default '',
+  date         date not null,
+  start_time   text,
+  dur          integer,
+  loc          text not null default '',
+  recur        text check (recur in ('weekly')),
+  sort_order   integer not null default 0
+);
+
+create index if not exists feed_events_feed_idx on public.feed_events(household_id, feed_id);
+create index if not exists feed_events_date_idx on public.feed_events(household_id, date);
+
 -- SecretRef: a *pointer* to a secret (op://Vault/Item/field), never the value.
 create table if not exists public.secrets (
   id           text primary key,
@@ -421,6 +442,18 @@ alter table public.favorites add column if not exists household_id text;
 alter table public.favorites add column if not exists name text default ''::text;
 alter table public.favorites add column if not exists tag text;
 alter table public.favorites add column if not exists sort_order integer default 0;
+
+-- feed_events
+alter table public.feed_events add column if not exists id text;
+alter table public.feed_events add column if not exists household_id text;
+alter table public.feed_events add column if not exists feed_id text;
+alter table public.feed_events add column if not exists title text default ''::text;
+alter table public.feed_events add column if not exists date date;
+alter table public.feed_events add column if not exists start_time text;
+alter table public.feed_events add column if not exists dur integer;
+alter table public.feed_events add column if not exists loc text default ''::text;
+alter table public.feed_events add column if not exists recur text;
+alter table public.feed_events add column if not exists sort_order integer default 0;
 
 -- feeds
 alter table public.feeds add column if not exists id text;
@@ -607,6 +640,18 @@ create policy household_users_self on public.household_users
   using (user_id = auth.uid());
 grant select on public.household_users to authenticated;
 
+-- feed_events: readable by the household, writable only by the scheduled sync.
+-- SELECT is the only grant, so a device cannot alter feed data even by mistake
+-- — which matches how the app already treats it (ResolvedEvent.readOnly).
+alter table public.feed_events enable row level security;
+alter table public.feed_events force row level security;
+drop policy if exists feed_events_household_read on public.feed_events;
+create policy feed_events_household_read on public.feed_events
+  for select to authenticated
+  using (household_id = public.current_household_id());
+grant select on public.feed_events to authenticated;
+revoke insert, update, delete on public.feed_events from authenticated, anon;
+
 -- oauth_tokens: RLS on with no policy for the browser roles, *and* no table
 -- grants. Either alone would be enough; both together means a leaked anon or
 -- authenticated key still cannot read an integration token.
@@ -633,7 +678,7 @@ declare
   watched text[] := array[
     'households', 'members', 'events', 'event_members', 'chores', 'chore_members',
     'chore_log', 'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists',
-    'list_items', 'countdowns', 'feeds', 'secrets', 'preflight_kids',
+    'list_items', 'countdowns', 'feeds', 'feed_events', 'secrets', 'preflight_kids',
     'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts'
   ];
 begin

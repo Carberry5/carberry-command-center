@@ -83,8 +83,10 @@ async function main() {
     assert.deepEqual(rebuilt[key], data[key], `mismatch in "${key}"`)
     ok(`${key} round-tripped intact`)
   }
-  assert.deepEqual(rebuilt.feedEv, {}, 'feedEv should come back empty')
-  ok('feedEv is not persisted (as designed)')
+  // feedEv is populated separately, from the read-only feed_events table — so
+  // with no feed rows passed in it is empty rather than reconstructed.
+  assert.deepEqual(rebuilt.feedEv, {}, 'feedEv should be empty with no feed events')
+  ok('feedEv is empty when no feed events are supplied')
 
   // --- the differ ------------------------------------------------------------
 
@@ -192,6 +194,48 @@ async function main() {
     assert.equal(res.rowCount, 1, `no unique index on ${table}(${pk.join(', ')})`)
   }
   ok(`all ${WRITE_ORDER.length} upsert conflict targets are backed by unique indexes`)
+
+  // --- feed events are read-only to the client ------------------------------
+
+  console.log('\nICS feed events')
+  await db.query(
+    `insert into public.feeds (id, household_id, name, url) values ($1, $2, $3, $4)`,
+    ['f_smoke', HH, 'School', 'https://example.test/school.ics']
+  )
+  await db.query(
+    `insert into public.feed_events (id, household_id, feed_id, title, date, start_time, loc, sort_order)
+     values ($1,$2,$3,$4,$5,$6,$7,$8), ($9,$10,$11,$12,$13,$14,$15,$16)`,
+    [
+      'f_smoke:0', HH, 'f_smoke', 'Early release', '2026-09-02', '12:30', 'LCPS', 0,
+      'f_smoke:1', HH, 'f_smoke', 'Teacher workday', '2026-09-07', null, '', 1,
+    ]
+  )
+
+  const feRows = (await db.query('select * from public.feed_events where household_id = $1', [HH]))
+    .rows as Row[]
+  const withFeeds = fromRows(back, data, feRows)
+
+  assert.equal(withFeeds.feedEv['f_smoke']?.length, 2, 'feed events did not reach feedEv')
+  assert.equal(withFeeds.feedEv['f_smoke'][0].title, 'Early release')
+  assert.equal(withFeeds.feedEv['f_smoke'][0].start, '12:30')
+  assert.equal(withFeeds.feedEv['f_smoke'][1].start, null, 'an all-day feed event should have no time')
+  assert.deepEqual(withFeeds.feedEv['f_smoke'][0].memberIds, [], 'feed events belong to nobody')
+  ok('feed events load into feedEv, ordered, with times and all-day handled')
+
+  // The differ must never produce a write for them: the scheduled sync owns
+  // that table, and the database only grants the browser SELECT anyway.
+  const feedChanged = structuredClone(withFeeds)
+  feedChanged.feedEv['f_smoke'][0].title = 'Tampered'
+  feedChanged.feedEv['f_smoke'].push({
+    id: 'invented', title: 'Invented', date: '2026-09-09', start: null,
+    dur: null, memberIds: [], loc: '', recur: null,
+  })
+  assert.deepEqual(
+    diff(withFeeds, feedChanged, HH),
+    [],
+    'editing feedEv must not generate any mutation'
+  )
+  ok('editing feedEv produces no writes — the sync owns that table')
 
   // --- composite delete filters ---------------------------------------------
 
