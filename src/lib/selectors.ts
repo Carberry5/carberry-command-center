@@ -58,13 +58,32 @@ export function memberDots(d: FamilyData, ids: string[] | undefined): string[] {
 /** The bar/dot colour for an event row. */
 export const eventColor = (d: FamilyData, e: ResolvedEvent) => e.feedColor ?? memberDots(d, e.memberIds)[0]
 
+/**
+ * Resolves a stored photo path against the deployment's base path.
+ *
+ * Member photos are stored relative ("assets/rowan.png"), and a relative URL in
+ * an inline style resolves against the *document* URL. On a GitHub Pages
+ * project site that only works when the page is served with its trailing slash
+ * — without it the photo would be fetched from the domain root and 404. Data
+ * URIs and absolute paths are left alone.
+ */
+function assetUrl(path: string): string {
+  if (/^(https?:|data:|\/)/i.test(path)) return path
+  const base = (import.meta.env.BASE_URL as string | undefined) ?? '/'
+  return `${base}${path}`.replace(/([^:]\/)\/+/g, '$1')
+}
+
 /** Avatar style: the member's colour, overlaid with their photo when they have one. */
 export function avatarStyle(m: Member, base: CSSProperties): CSSProperties {
   return {
     ...base,
     background: m.color,
     ...(m.photo
-      ? { backgroundImage: `url('${m.photo}')`, backgroundSize: 'cover', backgroundPosition: 'center' }
+      ? {
+          backgroundImage: `url('${assetUrl(m.photo)}')`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }
       : {}),
   }
 }

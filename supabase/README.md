@@ -97,3 +97,42 @@ with no members unless you add `--force`.
 
 This is what covers `loadSnapshot`, `applyMutations` and `subscribe`, including
 the composite-key delete filter and whether realtime actually delivers.
+
+## Deploying to GitHub Pages
+
+`.github/workflows/deploy.yml` builds and publishes on every push to `cloud`.
+One-time setup:
+
+1. **Settings → Pages → Source: GitHub Actions**
+2. **Settings → Secrets and variables → Actions → Variables**, add
+   `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+
+They are repository *variables*, not secrets, on purpose: both are compiled into
+the browser bundle and are meant to be public. Storing them as secrets would
+imply a confidentiality the build cannot provide. RLS and the household link are
+what protect the data — never the anon key. The service role key must never
+appear in the workflow, and never with a `VITE_` prefix, since Vite inlines
+those into the bundle.
+
+### Two settings that matter once the URL is reachable
+
+**Redirect URL.** Add `https://<user>.github.io/<repo>/` — with the trailing
+slash — under Authentication → URL Configuration. A project Pages site is served
+from a subpath, so the magic link must return there rather than to the domain
+root; `redirectUrl()` in `src/store/auth.tsx` derives it from the same base path
+the build uses.
+
+**Disable public sign-ups.** Authentication → Providers → Email → turn off
+"Allow new users to sign up". Otherwise anyone who finds the URL can create an
+account. RLS still means they'd see nothing — a new user has no row in
+`household_users`, so `current_household_id()` returns null and every policy
+denies — but there's no reason to allow the accounts to exist.
+
+### Functions
+
+GitHub Pages is static only, so the parts that need a server are not available
+there: ICS feed fetching (school calendars refuse browser requests), Sidekick
+(the Claude API key can't ship in a bundle), the WHOOP/Oura/Google OAuth flows,
+and server-side enforcement of parent-only actions. Those need Cloudflare Pages
+Functions. The app already probes `/api/health` and reports them as unavailable
+rather than failing oddly.

@@ -1,0 +1,79 @@
+name: Deploy to GitHub Pages
+
+# Builds the static app and publishes it to GitHub Pages.
+#
+# One-time setup in the repository:
+#   1. Settings -> Pages -> Source: "GitHub Actions"
+#   2. Settings -> Secrets and variables -> Actions -> Variables, add:
+#        VITE_SUPABASE_URL       https://rdmlrmilkgalixiafbfg.supabase.co
+#        VITE_SUPABASE_ANON_KEY  sb_publishable_...
+#
+# These are repository *variables*, not secrets, deliberately: both values are
+# compiled into the browser bundle and are meant to be public. Storing them as
+# secrets would imply a confidentiality this build cannot provide, and would
+# mask them in logs for no benefit. What actually protects the data is RLS plus
+# the household link — never the anon key.
+#
+# The service role key must never appear in this workflow. It bypasses RLS, and
+# anything VITE_-prefixed is inlined into the bundle.
+
+on:
+  push:
+    branches: [cloud]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Let a running deploy finish rather than cancelling it mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        env:
+          # A project Pages site is served from /<repo>/, so the bundle's asset
+          # paths and the magic-link redirect both need that prefix.
+          VITE_BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
+            echo "::error::VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set."
+            echo "::error::Add them under Settings -> Secrets and variables -> Actions -> Variables."
+            echo "::error::Without them the site builds but every device falls back to local storage."
+            exit 1
+          fi
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -45,6 +45,16 @@ const Ctx = createContext<AuthValue | null>(null)
 
 const OFFLINE_KEY = 'carberry.offline.v1'
 
+/**
+ * Where the magic link should land: this deployment's own base path. Whatever
+ * this resolves to must also be listed under Supabase's Redirect URLs, or the
+ * link bounces to the site's default URL instead.
+ */
+export function redirectUrl(): string {
+  const base = (import.meta.env.BASE_URL as string | undefined) ?? '/'
+  return new URL(base, window.location.origin).toString()
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const configured = isConfigured()
   const [session, setSession] = useState<Session | null>(null)
@@ -88,7 +98,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { error } = await supabase().auth.signInWithOtp({
         email: email.trim(),
-        options: { emailRedirectTo: window.location.origin },
+        // Not window.location.origin: a GitHub Pages project site lives at
+        // /<repo>/, and returning to the bare origin would land on a 404 with
+        // the session fragment attached — the link would appear to do nothing.
+        options: { emailRedirectTo: redirectUrl() },
       })
       return error ? error.message : null
     } catch (err) {
