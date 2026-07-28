@@ -37,6 +37,7 @@ export function migrate(input: Partial<FamilyData> | null | undefined): FamilyDa
   d.settings.feeds = (d.settings.feeds ?? []).map((f) => ({
     ...f,
     color: COLOR_MIGRATION[f.color] ?? f.color,
+    memberIds: f.memberIds ?? [],
   }))
 
   d.done = input.done ?? {}

@@ -598,6 +598,49 @@ function FeedsCard() {
             >
               {f.opRef ? `1Password · ${f.opRef}` : f.url}
             </div>
+            {/* Who this feed belongs to. None selected = the whole family, which
+                is how an events-with-no-members row already behaves elsewhere. */}
+            <div style={{ display: 'flex', gap: 5, marginTop: 7, alignItems: 'center' }}>
+              <span style={{ fontSize: '.72em', fontWeight: 700, color: line(0.5) }}>
+                {f.memberIds?.length ? 'For' : 'Everyone'}
+              </span>
+              {data.members.map((m) => {
+                const on = (f.memberIds ?? []).includes(m.id)
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    title={m.name}
+                    aria-pressed={on}
+                    onClick={() =>
+                      update((d) => {
+                        const feed = d.settings.feeds.find((x) => x.id === f.id)
+                        if (!feed) return
+                        const ids = feed.memberIds ?? []
+                        feed.memberIds = ids.includes(m.id)
+                          ? ids.filter((x) => x !== m.id)
+                          : [...ids, m.id]
+                      })
+                    }
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '.66em',
+                      fontFamily: "'Outfit', sans-serif",
+                      background: on ? m.color : 'transparent',
+                      color: on ? '#F7F9FF' : line(0.5),
+                      border: on ? 'none' : `1.5px solid ${line(0.2)}`,
+                      padding: 0,
+                    }}
+                  >
+                    {m.name[0]}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <span style={{ fontWeight: 600, fontSize: '.78em', color: line(0.55) }}>{f.status}</span>
           <button
@@ -672,6 +715,8 @@ function FeedsCard() {
                 ...(isOpRef ? { opRef: url } : {}),
                 color: '#5B8DEF',
                 status: 'Not synced yet',
+                // Whole family until someone tags it.
+                memberIds: [],
               })
             })
             setDraft({ name: '', url: '' })

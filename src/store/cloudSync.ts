@@ -256,7 +256,7 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
   data.settings.feeds.forEach((f, i) => {
     rows.feeds.push({
       id: f.id, household_id: hh, name: f.name, url: f.url, op_ref: f.opRef ?? null,
-      color: f.color, status: f.status, sort_order: i,
+      color: f.color, status: f.status, member_ids: f.memberIds ?? [], sort_order: i,
     })
   })
 
@@ -436,6 +436,7 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     ...(r.op_ref == null ? {} : { opRef: str(r.op_ref) }),
     color: str(r.color, '#5B8DEF'),
     status: str(r.status),
+    memberIds: (r.member_ids as string[]) ?? [],
   }))
 
   const secrets: SecretRef[] = [...rows.secrets].sort(bySort).map((r) => ({
@@ -485,15 +486,19 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
 
   // Read-only, keyed by feed id, in the shape selectors.ts already merges into
   // the calendar alongside the family's own events.
+  const feedMembers = new Map(feeds.map((f) => [f.id, f.memberIds]))
   const feedEv: Record<string, FamilyEvent[]> = {}
   for (const r of [...feedEvents].sort(bySort)) {
-    ;(feedEv[str(r.feed_id)] ??= []).push({
+    const fid = str(r.feed_id)
+    ;(feedEv[fid] ??= []).push({
       id: str(r.id),
       title: str(r.title),
       date: day(r.date),
       start: r.start_time == null ? null : str(r.start_time),
       dur: r.dur == null ? null : num(r.dur),
-      memberIds: [],
+      // Applied from the feed at read time, not stored per event — retagging a
+      // feed takes effect immediately instead of waiting for the next sync.
+      memberIds: feedMembers.get(fid) ?? [],
       loc: str(r.loc),
       recur: r.recur === 'weekly' ? 'weekly' : null,
     })

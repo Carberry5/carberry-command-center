@@ -187,6 +187,7 @@ export function seed(): FamilyData {
           url: 'https://www.lcps.org/calendars/calendar.ics',
           color: '#5B8DEF',
           status: 'Not synced yet',
+          memberIds: [],
         },
       ],
     },

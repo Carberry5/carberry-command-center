@@ -198,9 +198,10 @@ async function main() {
   // --- feed events are read-only to the client ------------------------------
 
   console.log('\nICS feed events')
+  // Tagged to two kids, as a school calendar covering siblings would be.
   await db.query(
-    `insert into public.feeds (id, household_id, name, url) values ($1, $2, $3, $4)`,
-    ['f_smoke', HH, 'School', 'https://example.test/school.ics']
+    `insert into public.feeds (id, household_id, name, url, member_ids) values ($1,$2,$3,$4,$5)`,
+    ['f_smoke', HH, 'School', 'https://example.test/school.ics', ['c', 'h']]
   )
   await db.query(
     `insert into public.feed_events (id, household_id, feed_id, title, date, start_time, loc, sort_order)
@@ -213,14 +214,29 @@ async function main() {
 
   const feRows = (await db.query('select * from public.feed_events where household_id = $1', [HH]))
     .rows as Row[]
+  // `back` was captured before this feed existed; refresh it so the member
+  // lookup has the row it needs.
+  back.feeds = (await db.query('select * from public.feeds where household_id = $1', [HH]))
+    .rows as Row[]
   const withFeeds = fromRows(back, data, feRows)
 
   assert.equal(withFeeds.feedEv['f_smoke']?.length, 2, 'feed events did not reach feedEv')
   assert.equal(withFeeds.feedEv['f_smoke'][0].title, 'Early release')
   assert.equal(withFeeds.feedEv['f_smoke'][0].start, '12:30')
   assert.equal(withFeeds.feedEv['f_smoke'][1].start, null, 'an all-day feed event should have no time')
-  assert.deepEqual(withFeeds.feedEv['f_smoke'][0].memberIds, [], 'feed events belong to nobody')
+  assert.deepEqual(
+    withFeeds.feedEv['f_smoke'][0].memberIds,
+    ['c', 'h'],
+    'feed events should inherit their feed\'s members'
+  )
   ok('feed events load into feedEv, ordered, with times and all-day handled')
+
+  // The tag lives on the feed, so retagging takes effect on the next read
+  // rather than waiting for the ICS sync to run again.
+  const retagged = structuredClone(back)
+  ;(retagged.feeds.find((f) => f.id === 'f_smoke') as Row).member_ids = ['h']
+  assert.deepEqual(fromRows(retagged, data, feRows).feedEv['f_smoke'][0].memberIds, ['h'])
+  ok('retagging a feed re-attributes its events without a re-sync')
 
   // The differ must never produce a write for them: the scheduled sync owns
   // that table, and the database only grants the browser SELECT anyway.

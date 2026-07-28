@@ -220,6 +220,7 @@ function parseFamily(src: string): FamilyDoc | null {
         ...(f.opRef ? { opRef: String(f.opRef) } : {}),
         color: String(f.color ?? '#5B8DEF'),
         status: String(f.status ?? 'Not synced yet'),
+        memberIds: Array.isArray(f.memberIds) ? f.memberIds.map(String) : [],
       })),
     },
     preflight: {

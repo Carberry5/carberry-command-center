@@ -259,6 +259,8 @@ create table if not exists public.feeds (
   op_ref       text,
   color        text not null default '#5B8DEF',
   status       text not null default 'Not synced yet',
+  -- Members this feed's events belong to; empty means the whole family.
+  member_ids   text[] not null default '{}',
   sort_order   integer not null default 0
 );
 
@@ -463,6 +465,7 @@ alter table public.feeds add column if not exists url text default ''::text;
 alter table public.feeds add column if not exists op_ref text;
 alter table public.feeds add column if not exists color text default '#5B8DEF'::text;
 alter table public.feeds add column if not exists status text default 'Not synced yet'::text;
+alter table public.feeds add column if not exists member_ids text[] default '{}'::text[];
 alter table public.feeds add column if not exists sort_order integer default 0;
 
 -- fit_stats

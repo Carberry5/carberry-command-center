@@ -102,6 +102,12 @@ export interface Feed {
   opRef?: string
   color: string
   status: string
+  /**
+   * Members these events belong to. Empty means the whole family — a school
+   * calendar covering two kids is tagged with both, so it lands on their pages
+   * and not on their siblings'.
+   */
+  memberIds: string[]
 }
 
 export interface Settings {
