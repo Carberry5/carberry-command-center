@@ -614,4 +614,43 @@ alter table public.oauth_tokens enable row level security;
 alter table public.oauth_tokens force row level security;
 revoke all on public.oauth_tokens from anon, authenticated;
 
+-- ---------------------------------------------------------------------------
+-- Realtime
+--
+-- Supabase only broadcasts row changes for tables in the supabase_realtime
+-- publication. Without this, cloudSync's subscribe() connects, reports itself
+-- healthy, and never fires — the failure looks like "other devices don't
+-- update" rather than like an error.
+--
+-- oauth_tokens is deliberately excluded: nothing should be able to watch it.
+-- The whole block no-ops where that publication doesn't exist, so plain
+-- Postgres (the local test cluster) is unaffected.
+-- ---------------------------------------------------------------------------
+
+do $$
+declare
+  t text;
+  watched text[] := array[
+    'households', 'members', 'events', 'event_members', 'chores', 'chore_members',
+    'chore_log', 'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists',
+    'list_items', 'countdowns', 'feeds', 'secrets', 'preflight_kids',
+    'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts'
+  ];
+begin
+  if not exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    raise notice 'supabase_realtime publication absent — skipping (not a Supabase database)';
+    return;
+  end if;
+
+  foreach t in array watched loop
+    if not exists (
+      select 1 from pg_publication_tables
+      where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table public.%I', t);
+    end if;
+  end loop;
+end
+$$;
+
 commit;

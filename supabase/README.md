@@ -76,6 +76,24 @@ PGURL=postgres://… npm run test:cloud     # a specific database
 prove idempotency, then runs the RLS suite and `scripts/cloudsync-test.ts`.
 
 Local Postgres exercises the schema, the policies, and every column
-`cloudSync.ts` names — but it speaks raw SQL, not PostgREST. The supabase-js
-call layer (`loadSnapshot`, `applyMutations`, `subscribe`) is still unproven
-against a real Supabase stack; see the note in `src/store/cloudSync.ts`.
+`cloudSync.ts` names — but it speaks raw SQL, not PostgREST. For the rest,
+there is a second suite that runs against the live project:
+
+```bash
+export VITE_SUPABASE_URL=https://rdmlrmilkgalixiafbfg.supabase.co
+export VITE_SUPABASE_ANON_KEY=…          # Settings -> API
+export CC_EMAIL=you@example.com CC_PASSWORD=…
+
+npx tsx scripts/cloud-smoke.ts           # read-only: auth, RLS, loadSnapshot
+npx tsx scripts/cloud-smoke.ts --write   # + insert/update/delete + realtime
+npx tsx scripts/cloud-smoke.ts --seed    # + seed an empty household from seed.ts
+```
+
+It signs in with the **anon** key and a password, exactly as the app will —
+deliberately not the service role key, which bypasses RLS and would prove
+nothing about whether the app's own writes are allowed. `--write` creates a
+single scratch list and removes it again; `--seed` only fires on a household
+with no members unless you add `--force`.
+
+This is what covers `loadSnapshot`, `applyMutations` and `subscribe`, including
+the composite-key delete filter and whether realtime actually delivers.

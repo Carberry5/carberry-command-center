@@ -606,6 +606,28 @@ function env(): ViteEnv {
 
 let client: SupabaseClient | null = null
 
+/**
+ * Point this module at a project explicitly rather than at import.meta.env.
+ * The browser never needs it — Vite supplies the env — but Node has no Vite,
+ * so scripts/cloud-smoke.ts uses this to drive the real client.
+ */
+export function configureCloud(
+  url: string,
+  anonKey: string,
+  opts: { persistSession?: boolean } = {}
+): SupabaseClient {
+  const persist = opts.persistSession ?? true
+  client = createClient(url, anonKey, {
+    auth: {
+      persistSession: persist,
+      autoRefreshToken: true,
+      // Only meaningful in a browser, where the magic link comes back in the URL.
+      detectSessionInUrl: persist,
+    },
+  })
+  return client
+}
+
 export function supabase(): SupabaseClient {
   if (client) return client
   const { VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY } = env()
@@ -762,7 +784,7 @@ export async function pushChanges(
 export function subscribe(
   householdId: string,
   onChange: () => void,
-  opts: { debounceMs?: number } = {}
+  opts: { debounceMs?: number; onStatus?: (status: string) => void } = {}
 ): () => void {
   const debounceMs = opts.debounceMs ?? 150
   const sb = supabase()
@@ -791,7 +813,9 @@ export function subscribe(
       ping
     )
   }
-  void channel.subscribe()
+  // SUBSCRIBED / CHANNEL_ERROR / TIMED_OUT / CLOSED — worth surfacing, since a
+  // channel that never reaches SUBSCRIBED fails silently otherwise.
+  void channel.subscribe((status) => opts.onStatus?.(status))
 
   return () => {
     closed = true
