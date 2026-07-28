@@ -224,6 +224,17 @@ async function main() {
   assert.equal(status, 'SUBSCRIBED', `channel never subscribed (last status: ${status})`)
   ok('channel reached SUBSCRIBED')
 
+  // SUBSCRIBED means the channel joined, not that the server has finished
+  // wiring up its replication filters. A write inside that window is never
+  // captured, and waiting afterwards doesn't recover it — the event simply
+  // never existed. This was the whole of the earlier "realtime is broken"
+  // symptom: the same subscribe() received fine when given a moment first.
+  //
+  // The app doesn't need this — it subscribes on mount and writes when someone
+  // taps something, which is an eternity by comparison. It's the test that
+  // writes suspiciously fast.
+  await sleep(3000)
+
   const waitForEvent = async (from: number, label: string, ms = 15000) => {
     const deadline = Date.now() + ms
     while (fired === from && Date.now() < deadline) await sleep(250)
