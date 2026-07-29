@@ -87,6 +87,20 @@ create table if not exists public.members (
 
 create index if not exists members_household_idx on public.members(household_id);
 
+-- Shortcuts shown on a member's page — school portals and the like. Plain
+-- links, no credentials: they open in a new tab and whatever is behind them
+-- does its own authentication.
+create table if not exists public.member_links (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  member_id    text not null,
+  label        text not null default '',
+  url          text not null default '',
+  sort_order   integer not null default 0
+);
+
+create index if not exists member_links_member_idx on public.member_links(household_id, member_id);
+
 -- ---------------------------------------------------------------------------
 -- Calendar
 -- ---------------------------------------------------------------------------
@@ -259,10 +273,33 @@ create table if not exists public.feeds (
   op_ref       text,
   color        text not null default '#5B8DEF',
   status       text not null default 'Not synced yet',
+  -- Members this feed's events belong to; empty means the whole family.
+  member_ids   text[] not null default '{}',
   sort_order   integer not null default 0
 );
 
 create index if not exists feeds_household_idx on public.feeds(household_id);
+
+-- Events pulled from ICS feeds. Written only by the scheduled sync (service
+-- role) and read-only to the browser — hence its own policy below rather than
+-- the shared read/write one, and its absence from cloudSync's WRITE_ORDER.
+-- They are a cache: the sync replaces a feed's rows wholesale each run, so
+-- nothing here is authored by anyone and nothing is lost by discarding it.
+create table if not exists public.feed_events (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  feed_id      text not null references public.feeds(id) on delete cascade,
+  title        text not null default '',
+  date         date not null,
+  start_time   text,
+  dur          integer,
+  loc          text not null default '',
+  recur        text check (recur in ('weekly')),
+  sort_order   integer not null default 0
+);
+
+create index if not exists feed_events_feed_idx on public.feed_events(household_id, feed_id);
+create index if not exists feed_events_date_idx on public.feed_events(household_id, date);
 
 -- SecretRef: a *pointer* to a secret (op://Vault/Item/field), never the value.
 create table if not exists public.secrets (
@@ -350,6 +387,9 @@ create table if not exists public.oauth_tokens (
   id            text primary key,
   household_id  text not null references public.households(id) on delete cascade,
   provider      text not null,
+  -- Which family member this account belongs to, so a sync knows whose
+  -- fit_stats row to write. Patrick's WHOOP, Elizabeth's Oura.
+  member_id     text,
   access_token  text,
   refresh_token text,
   expires_at    timestamptz,
@@ -422,6 +462,18 @@ alter table public.favorites add column if not exists name text default ''::text
 alter table public.favorites add column if not exists tag text;
 alter table public.favorites add column if not exists sort_order integer default 0;
 
+-- feed_events
+alter table public.feed_events add column if not exists id text;
+alter table public.feed_events add column if not exists household_id text;
+alter table public.feed_events add column if not exists feed_id text;
+alter table public.feed_events add column if not exists title text default ''::text;
+alter table public.feed_events add column if not exists date date;
+alter table public.feed_events add column if not exists start_time text;
+alter table public.feed_events add column if not exists dur integer;
+alter table public.feed_events add column if not exists loc text default ''::text;
+alter table public.feed_events add column if not exists recur text;
+alter table public.feed_events add column if not exists sort_order integer default 0;
+
 -- feeds
 alter table public.feeds add column if not exists id text;
 alter table public.feeds add column if not exists household_id text;
@@ -430,6 +482,7 @@ alter table public.feeds add column if not exists url text default ''::text;
 alter table public.feeds add column if not exists op_ref text;
 alter table public.feeds add column if not exists color text default '#5B8DEF'::text;
 alter table public.feeds add column if not exists status text default 'Not synced yet'::text;
+alter table public.feeds add column if not exists member_ids text[] default '{}'::text[];
 alter table public.feeds add column if not exists sort_order integer default 0;
 
 -- fit_stats
@@ -498,6 +551,14 @@ alter table public.meal_plan add column if not exists household_id text;
 alter table public.meal_plan add column if not exists day date;
 alter table public.meal_plan add column if not exists meal text default ''::text;
 
+-- member_links
+alter table public.member_links add column if not exists id text;
+alter table public.member_links add column if not exists household_id text;
+alter table public.member_links add column if not exists member_id text;
+alter table public.member_links add column if not exists label text default ''::text;
+alter table public.member_links add column if not exists url text default ''::text;
+alter table public.member_links add column if not exists sort_order integer default 0;
+
 -- members
 alter table public.members add column if not exists id text;
 alter table public.members add column if not exists household_id text;
@@ -513,6 +574,7 @@ alter table public.members add column if not exists sort_order integer default 0
 alter table public.oauth_tokens add column if not exists id text;
 alter table public.oauth_tokens add column if not exists household_id text;
 alter table public.oauth_tokens add column if not exists provider text;
+alter table public.oauth_tokens add column if not exists member_id text;
 alter table public.oauth_tokens add column if not exists access_token text;
 alter table public.oauth_tokens add column if not exists refresh_token text;
 alter table public.oauth_tokens add column if not exists expires_at timestamp with time zone;
@@ -566,7 +628,7 @@ declare
   t text;
   -- Every household-scoped table gets the same policy shape.
   scoped text[] := array[
-    'members', 'events', 'event_members', 'chores', 'chore_members', 'chore_log',
+    'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members', 'chore_log',
     'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists', 'list_items',
     'countdowns', 'feeds', 'secrets', 'preflight_kids', 'preflight_bring',
     'fit_stats', 'greenlight', 'greenlight_payouts'
@@ -607,6 +669,18 @@ create policy household_users_self on public.household_users
   using (user_id = auth.uid());
 grant select on public.household_users to authenticated;
 
+-- feed_events: readable by the household, writable only by the scheduled sync.
+-- SELECT is the only grant, so a device cannot alter feed data even by mistake
+-- — which matches how the app already treats it (ResolvedEvent.readOnly).
+alter table public.feed_events enable row level security;
+alter table public.feed_events force row level security;
+drop policy if exists feed_events_household_read on public.feed_events;
+create policy feed_events_household_read on public.feed_events
+  for select to authenticated
+  using (household_id = public.current_household_id());
+grant select on public.feed_events to authenticated;
+revoke insert, update, delete on public.feed_events from authenticated, anon;
+
 -- oauth_tokens: RLS on with no policy for the browser roles, *and* no table
 -- grants. Either alone would be enough; both together means a leaked anon or
 -- authenticated key still cannot read an integration token.
@@ -631,9 +705,9 @@ do $$
 declare
   t text;
   watched text[] := array[
-    'households', 'members', 'events', 'event_members', 'chores', 'chore_members',
+    'households', 'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members',
     'chore_log', 'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists',
-    'list_items', 'countdowns', 'feeds', 'secrets', 'preflight_kids',
+    'list_items', 'countdowns', 'feeds', 'feed_events', 'secrets', 'preflight_kids',
     'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts'
   ];
 begin

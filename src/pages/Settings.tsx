@@ -51,6 +51,7 @@ export function SettingsPage() {
   const [zipMsg, setZipMsg] = useState('')
   const [newPin, setNewPin] = useState('')
   const [bringDraft, setBringDraft] = useState<Record<string, string>>({})
+  const [linkDraft, setLinkDraft] = useState<Record<string, { label: string; url: string }>>({})
 
   const kids = data.members.filter((m) => m.role === 'kid')
 
@@ -91,7 +92,7 @@ export function SettingsPage() {
           <button
             onClick={() =>
               update((d) => {
-                d.members.push({ id: uid(), name: 'New member', role: 'kid', color: '#2E9E6B' })
+                d.members.push({ id: uid(), name: 'New member', role: 'kid', color: '#2E9E6B', links: [] })
               })
             }
             style={{ ...primary, padding: '9px 15px', fontSize: '.82em' }}
@@ -198,6 +199,83 @@ export function SettingsPage() {
             >
               Remove
             </button>
+
+            {/* Shortcuts shown on this member's page — school portals and the
+                like. Just links; whatever is behind them handles its own login. */}
+            <div style={{ flexBasis: '100%', display: 'flex', gap: 6, flexWrap: 'wrap', paddingLeft: 44 }}>
+              {(m.links ?? []).map((l) => (
+                <span
+                  key={l.id}
+                  title={l.url}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    borderRadius: 999,
+                    padding: '5px 8px 5px 12px',
+                    fontWeight: 700,
+                    fontSize: '.76em',
+                    background: 'rgba(35,42,61,.05)',
+                  }}
+                >
+                  {l.label}
+                  <button
+                    onClick={() =>
+                      update((d) => {
+                        const t = d.members.find((x) => x.id === m.id)
+                        if (t) t.links = (t.links ?? []).filter((x) => x.id !== l.id)
+                      })
+                    }
+                    aria-label={`Remove ${l.label}`}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      color: line(0.5),
+                      fontWeight: 700,
+                      padding: '0 2px',
+                    }}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              <input
+                value={linkDraft[m.id]?.label ?? ''}
+                onChange={(e) =>
+                  setLinkDraft((p) => ({ ...p, [m.id]: { ...(p[m.id] ?? { label: '', url: '' }), label: e.target.value } }))
+                }
+                placeholder="Link name"
+                style={{ ...smallInput, width: 120, fontSize: '.8em', padding: '6px 9px' }}
+              />
+              <input
+                value={linkDraft[m.id]?.url ?? ''}
+                onChange={(e) =>
+                  setLinkDraft((p) => ({ ...p, [m.id]: { ...(p[m.id] ?? { label: '', url: '' }), url: e.target.value } }))
+                }
+                placeholder="https://…"
+                style={{ ...smallInput, flex: 1, minWidth: 180, fontSize: '.8em', padding: '6px 9px' }}
+              />
+              <button
+                onClick={() => {
+                  const draft = linkDraft[m.id]
+                  const url = draft?.url?.trim()
+                  if (!url) return
+                  update((d) => {
+                    const t = d.members.find((x) => x.id === m.id)
+                    if (!t) return
+                    t.links = [
+                      ...(t.links ?? []),
+                      { id: uid(), label: draft.label.trim() || new URL(url, 'https://x').hostname, url },
+                    ]
+                  })
+                  setLinkDraft((p) => ({ ...p, [m.id]: { label: '', url: '' } }))
+                }}
+                style={{ ...primary, padding: '6px 12px', fontSize: '.78em' }}
+              >
+                + Link
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -598,6 +676,49 @@ function FeedsCard() {
             >
               {f.opRef ? `1Password · ${f.opRef}` : f.url}
             </div>
+            {/* Who this feed belongs to. None selected = the whole family, which
+                is how an events-with-no-members row already behaves elsewhere. */}
+            <div style={{ display: 'flex', gap: 5, marginTop: 7, alignItems: 'center' }}>
+              <span style={{ fontSize: '.72em', fontWeight: 700, color: line(0.5) }}>
+                {f.memberIds?.length ? 'For' : 'Everyone'}
+              </span>
+              {data.members.map((m) => {
+                const on = (f.memberIds ?? []).includes(m.id)
+                return (
+                  <button
+                    key={m.id}
+                    type="button"
+                    title={m.name}
+                    aria-pressed={on}
+                    onClick={() =>
+                      update((d) => {
+                        const feed = d.settings.feeds.find((x) => x.id === f.id)
+                        if (!feed) return
+                        const ids = feed.memberIds ?? []
+                        feed.memberIds = ids.includes(m.id)
+                          ? ids.filter((x) => x !== m.id)
+                          : [...ids, m.id]
+                      })
+                    }
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: '50%',
+                      cursor: 'pointer',
+                      fontWeight: 700,
+                      fontSize: '.66em',
+                      fontFamily: "'Outfit', sans-serif",
+                      background: on ? m.color : 'transparent',
+                      color: on ? '#F7F9FF' : line(0.5),
+                      border: on ? 'none' : `1.5px solid ${line(0.2)}`,
+                      padding: 0,
+                    }}
+                  >
+                    {m.name[0]}
+                  </button>
+                )
+              })}
+            </div>
           </div>
           <span style={{ fontWeight: 600, fontSize: '.78em', color: line(0.55) }}>{f.status}</span>
           <button
@@ -672,6 +793,8 @@ function FeedsCard() {
                 ...(isOpRef ? { opRef: url } : {}),
                 color: '#5B8DEF',
                 status: 'Not synced yet',
+                // Whole family until someone tags it.
+                memberIds: [],
               })
             })
             setDraft({ name: '', url: '' })

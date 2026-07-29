@@ -45,6 +45,7 @@ export type Row = Record<string, unknown>
 export interface TableRows {
   households: Row[]
   members: Row[]
+  member_links: Row[]
   events: Row[]
   event_members: Row[]
   chores: Row[]
@@ -78,6 +79,7 @@ export type TableName = keyof TableRows
 export const PRIMARY_KEYS: Record<TableName, string[]> = {
   households: ['id'],
   members: ['id'],
+  member_links: ['id'],
   events: ['id'],
   event_members: ['event_id', 'member_id'],
   chores: ['id'],
@@ -106,6 +108,7 @@ export const PRIMARY_KEYS: Record<TableName, string[]> = {
 export const WRITE_ORDER: TableName[] = [
   'households',
   'members',
+  'member_links',
   'events',
   'event_members',
   'chores',
@@ -129,7 +132,7 @@ export const WRITE_ORDER: TableName[] = [
 
 function emptyRows(): TableRows {
   return {
-    households: [], members: [], events: [], event_members: [], chores: [],
+    households: [], members: [], member_links: [], events: [], event_members: [], chores: [],
     chore_members: [], chore_log: [], rewards: [], redemptions: [], favorites: [],
     meal_plan: [], lists: [], list_items: [], countdowns: [], feeds: [],
     secrets: [], preflight_kids: [], preflight_bring: [], fit_stats: [],
@@ -166,6 +169,11 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
       age: m.age ?? null,
       photo: m.photo ?? null,
       sort_order: i,
+    })
+    ;(m.links ?? []).forEach((l, li) => {
+      rows.member_links.push({
+        id: l.id, household_id: hh, member_id: m.id, label: l.label, url: l.url, sort_order: li,
+      })
     })
   })
 
@@ -256,7 +264,7 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
   data.settings.feeds.forEach((f, i) => {
     rows.feeds.push({
       id: f.id, household_id: hh, name: f.name, url: f.url, op_ref: f.opRef ?? null,
-      color: f.color, status: f.status, sort_order: i,
+      color: f.color, status: f.status, member_ids: f.memberIds ?? [], sort_order: i,
     })
   })
 
@@ -326,8 +334,20 @@ const bySort = (a: Row, b: Row) => num(a.sort_order) - num(b.sort_order)
 /** Postgres `date` arrives as "YYYY-MM-DD"; guard against a full timestamp. */
 const day = (v: unknown): string => str(v).slice(0, 10)
 
-export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
+/**
+ * `feedEvents` is passed separately rather than living in TableRows: those rows
+ * are written only by the scheduled ICS sync, and keeping them out of the
+ * writable set means the differ can never generate a write for them.
+ */
+export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = []): FamilyData {
   const hh = rows.households[0] ?? {}
+
+  const linksByMember = new Map<string, Row[]>()
+  for (const r of rows.member_links) {
+    const list = linksByMember.get(str(r.member_id)) ?? []
+    list.push(r)
+    linksByMember.set(str(r.member_id), list)
+  }
 
   const members: Member[] = [...rows.members].sort(bySort).map((r) => ({
     id: str(r.id),
@@ -336,6 +356,9 @@ export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
     color: str(r.color, '#4A5B8C'),
     ...(r.age == null ? {} : { age: num(r.age) }),
     ...(r.photo == null ? {} : { photo: str(r.photo) }),
+    links: (linksByMember.get(str(r.id)) ?? []).sort(bySort).map((l) => ({
+      id: str(l.id), label: str(l.label), url: str(l.url),
+    })),
   }))
 
   const eventMembers = new Map<string, string[]>()
@@ -431,6 +454,7 @@ export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
     ...(r.op_ref == null ? {} : { opRef: str(r.op_ref) }),
     color: str(r.color, '#5B8DEF'),
     status: str(r.status),
+    memberIds: (r.member_ids as string[]) ?? [],
   }))
 
   const secrets: SecretRef[] = [...rows.secrets].sort(bySort).map((r) => ({
@@ -478,6 +502,26 @@ export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
     payByMember.set(str(r.member_id), list)
   })
 
+  // Read-only, keyed by feed id, in the shape selectors.ts already merges into
+  // the calendar alongside the family's own events.
+  const feedMembers = new Map(feeds.map((f) => [f.id, f.memberIds]))
+  const feedEv: Record<string, FamilyEvent[]> = {}
+  for (const r of [...feedEvents].sort(bySort)) {
+    const fid = str(r.feed_id)
+    ;(feedEv[fid] ??= []).push({
+      id: str(r.id),
+      title: str(r.title),
+      date: day(r.date),
+      start: r.start_time == null ? null : str(r.start_time),
+      dur: r.dur == null ? null : num(r.dur),
+      // Applied from the feed at read time, not stored per event — retagging a
+      // feed takes effect immediately instead of waiting for the next sync.
+      memberIds: feedMembers.get(fid) ?? [],
+      loc: str(r.loc),
+      recur: r.recur === 'weekly' ? 'weekly' : null,
+    })
+  }
+
   const gl: Record<string, Greenlight> = {}
   rows.greenlight.forEach((r) => {
     const mid = str(r.member_id)
@@ -512,8 +556,7 @@ export function fromRows(rows: TableRows, base: FamilyData): FamilyData {
       place: str(hh.place),
       feeds,
     },
-    // Feed events are a cache, never persisted — the ICS sync repopulates them.
-    feedEv: {},
+    feedEv,
     preflight,
     fit,
     gl,
@@ -683,7 +726,15 @@ export async function loadSnapshot(householdId: string, base: FamilyData): Promi
   )
 
   for (const [table, data] of results) rows[table] = data
-  return fromRows(rows, base)
+
+  // Read-only: written by the scheduled ICS sync, never by a device.
+  const { data: feedEvents, error: feErr } = await sb
+    .from('feed_events')
+    .select('*')
+    .eq('household_id', householdId)
+  if (feErr) throw new Error(`feed_events: ${feErr.message}`)
+
+  return fromRows(rows, base, (feedEvents ?? []) as Row[])
 }
 
 // ---------------------------------------------------------------------------
@@ -829,7 +880,10 @@ export function subscribe(
     // supabase-js already prefixes topics with "realtime:", and a second
     // separator is not worth risking in the server's topic routing.
     let ch = sb.channel(`household-${householdId}-${++channelSeq}`)
-    for (const table of WRITE_ORDER) {
+    // feed_events is read-only to the client but still worth watching: when the
+    // scheduled ICS sync lands new school events, the calendar should pick them
+    // up without anyone reloading.
+    for (const table of [...WRITE_ORDER, 'feed_events'] as const) {
       ch = ch.on(
         'postgres_changes',
         {

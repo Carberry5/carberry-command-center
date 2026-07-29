@@ -176,6 +176,37 @@ export function MemberPage() {
         ) : null}
       </div>
 
+      {member.links?.length ? (
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '2px 0 2px' }}>
+          {member.links.map((l) => (
+            <a
+              key={l.id}
+              href={l.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
+                borderRadius: 999,
+                padding: '9px 15px',
+                fontWeight: 700,
+                fontSize: '.84em',
+                textDecoration: 'none',
+                color: INK,
+                background: '#FFFFFF',
+                border: `1.5px solid ${line(0.14)}`,
+              }}
+            >
+              {l.label}
+              <span aria-hidden="true" style={{ color: line(0.45), fontSize: '.9em' }}>
+                ↗
+              </span>
+            </a>
+          ))}
+        </div>
+      ) : null}
+
       <div
         style={{
           display: 'grid',

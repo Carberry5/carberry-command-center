@@ -83,8 +83,10 @@ async function main() {
     assert.deepEqual(rebuilt[key], data[key], `mismatch in "${key}"`)
     ok(`${key} round-tripped intact`)
   }
-  assert.deepEqual(rebuilt.feedEv, {}, 'feedEv should come back empty')
-  ok('feedEv is not persisted (as designed)')
+  // feedEv is populated separately, from the read-only feed_events table — so
+  // with no feed rows passed in it is empty rather than reconstructed.
+  assert.deepEqual(rebuilt.feedEv, {}, 'feedEv should be empty with no feed events')
+  ok('feedEv is empty when no feed events are supplied')
 
   // --- the differ ------------------------------------------------------------
 
@@ -192,6 +194,102 @@ async function main() {
     assert.equal(res.rowCount, 1, `no unique index on ${table}(${pk.join(', ')})`)
   }
   ok(`all ${WRITE_ORDER.length} upsert conflict targets are backed by unique indexes`)
+
+  // --- member links ----------------------------------------------------------
+
+  console.log('\nmember links')
+  const linked = structuredClone(data)
+  linked.members[2].links = [
+    { id: 'ln_sch', label: 'Schoology', url: 'https://app.schoology.com/home' },
+    { id: 'ln_tc', label: 'Transparent Classroom', url: 'https://www.transparentclassroom.com/s/2707' },
+  ]
+  const linkMut = diff(data, linked, HH)
+  assert.equal(linkMut.length, 1, 'adding links should touch one table')
+  assert.equal(linkMut[0].table, 'member_links')
+  assert.equal(linkMut[0].upsert.length, 2)
+  ok('adding two links -> 2 member_links rows, nothing else')
+
+  for (const row of linkMut[0].upsert) {
+    const cols = Object.keys(row)
+    await db.query(
+      `insert into public.member_links (${cols.map((c) => `"${c}"`).join(', ')})
+       values (${cols.map((_, i) => `$${i + 1}`).join(', ')})`,
+      cols.map((c) => row[c])
+    )
+  }
+  back.member_links = (
+    await db.query('select * from public.member_links where household_id = $1', [HH])
+  ).rows as Row[]
+  const withLinks = fromRows(back, data)
+  assert.deepEqual(withLinks.members[2].links, linked.members[2].links, 'links did not round-trip')
+  ok('member links round-trip in order, attached to the right member')
+
+  const unlinked = structuredClone(linked)
+  unlinked.members[2].links = []
+  const rm = diff(linked, unlinked, HH)
+  assert.equal(rm[0].remove.length, 2)
+  ok('clearing links -> 2 deletes')
+
+  await db.query('delete from public.member_links where household_id = $1', [HH])
+  back.member_links = []
+
+  // --- feed events are read-only to the client ------------------------------
+
+  console.log('\nICS feed events')
+  // Tagged to two kids, as a school calendar covering siblings would be.
+  await db.query(
+    `insert into public.feeds (id, household_id, name, url, member_ids) values ($1,$2,$3,$4,$5)`,
+    ['f_smoke', HH, 'School', 'https://example.test/school.ics', ['c', 'h']]
+  )
+  await db.query(
+    `insert into public.feed_events (id, household_id, feed_id, title, date, start_time, loc, sort_order)
+     values ($1,$2,$3,$4,$5,$6,$7,$8), ($9,$10,$11,$12,$13,$14,$15,$16)`,
+    [
+      'f_smoke:0', HH, 'f_smoke', 'Early release', '2026-09-02', '12:30', 'LCPS', 0,
+      'f_smoke:1', HH, 'f_smoke', 'Teacher workday', '2026-09-07', null, '', 1,
+    ]
+  )
+
+  const feRows = (await db.query('select * from public.feed_events where household_id = $1', [HH]))
+    .rows as Row[]
+  // `back` was captured before this feed existed; refresh it so the member
+  // lookup has the row it needs.
+  back.feeds = (await db.query('select * from public.feeds where household_id = $1', [HH]))
+    .rows as Row[]
+  const withFeeds = fromRows(back, data, feRows)
+
+  assert.equal(withFeeds.feedEv['f_smoke']?.length, 2, 'feed events did not reach feedEv')
+  assert.equal(withFeeds.feedEv['f_smoke'][0].title, 'Early release')
+  assert.equal(withFeeds.feedEv['f_smoke'][0].start, '12:30')
+  assert.equal(withFeeds.feedEv['f_smoke'][1].start, null, 'an all-day feed event should have no time')
+  assert.deepEqual(
+    withFeeds.feedEv['f_smoke'][0].memberIds,
+    ['c', 'h'],
+    'feed events should inherit their feed\'s members'
+  )
+  ok('feed events load into feedEv, ordered, with times and all-day handled')
+
+  // The tag lives on the feed, so retagging takes effect on the next read
+  // rather than waiting for the ICS sync to run again.
+  const retagged = structuredClone(back)
+  ;(retagged.feeds.find((f) => f.id === 'f_smoke') as Row).member_ids = ['h']
+  assert.deepEqual(fromRows(retagged, data, feRows).feedEv['f_smoke'][0].memberIds, ['h'])
+  ok('retagging a feed re-attributes its events without a re-sync')
+
+  // The differ must never produce a write for them: the scheduled sync owns
+  // that table, and the database only grants the browser SELECT anyway.
+  const feedChanged = structuredClone(withFeeds)
+  feedChanged.feedEv['f_smoke'][0].title = 'Tampered'
+  feedChanged.feedEv['f_smoke'].push({
+    id: 'invented', title: 'Invented', date: '2026-09-09', start: null,
+    dur: null, memberIds: [], loc: '', recur: null,
+  })
+  assert.deepEqual(
+    diff(withFeeds, feedChanged, HH),
+    [],
+    'editing feedEv must not generate any mutation'
+  )
+  ok('editing feedEv produces no writes — the sync owns that table')
 
   // --- composite delete filters ---------------------------------------------
 

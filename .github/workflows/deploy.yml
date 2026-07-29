@@ -53,15 +53,46 @@ jobs:
           # A project Pages site is served from /<repo>/, so the bundle's asset
           # paths and the magic-link redirect both need that prefix.
           VITE_BASE_PATH: /${{ github.event.repository.name }}/
-          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+          # Accept either tab. Variables is the right home for these — both are
+          # compiled into the browser bundle and are meant to be public — but
+          # "Secrets and variables" puts the two a click apart, and a key looks
+          # like a secret. Falling back costs nothing and removes a failure whose
+          # only symptom is two blank strings.
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL || secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY || secrets.VITE_SUPABASE_ANON_KEY }}
+          URL_IN_VARS: ${{ vars.VITE_SUPABASE_URL != '' }}
+          KEY_IN_VARS: ${{ vars.VITE_SUPABASE_ANON_KEY != '' }}
         run: |
+          # Report presence and length only — never the values. A secret would
+          # be masked anyway, and a variable has no business in the log either.
+          report() {
+            if [ -n "$2" ]; then
+              echo "  $1: set, ${#2} chars (from $3)"
+            else
+              echo "  $1: MISSING"
+            fi
+          }
+          echo "Supabase configuration:"
+          report VITE_SUPABASE_URL      "$VITE_SUPABASE_URL"      "$([ "$URL_IN_VARS" = true ] && echo variables || echo secrets)"
+          report VITE_SUPABASE_ANON_KEY "$VITE_SUPABASE_ANON_KEY" "$([ "$KEY_IN_VARS" = true ] && echo variables || echo secrets)"
+
           if [ -z "$VITE_SUPABASE_URL" ] || [ -z "$VITE_SUPABASE_ANON_KEY" ]; then
-            echo "::error::VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY are not set."
-            echo "::error::Add them under Settings -> Secrets and variables -> Actions -> Variables."
-            echo "::error::Without them the site builds but every device falls back to local storage."
+            echo "::error::Supabase configuration is missing — checked both Variables and Secrets."
+            echo "::error::Settings -> Secrets and variables -> Actions. Add VITE_SUPABASE_URL and"
+            echo "::error::VITE_SUPABASE_ANON_KEY as repository-level entries (not environment-scoped)."
+            echo "::error::Without them the site builds fine and every device silently falls back to"
+            echo "::error::local storage, which is why this stops here instead of deploying."
             exit 1
           fi
+
+          case "$VITE_SUPABASE_ANON_KEY" in
+            sb_secret_*|*service_role*)
+              echo "::error::That is the service role key. It bypasses RLS, and anything VITE_-prefixed"
+              echo "::error::is inlined into the browser bundle. Use the anon / publishable key."
+              exit 1
+              ;;
+          esac
+
           npm run build
 
       - uses: actions/upload-pages-artifact@v3
