@@ -64,8 +64,8 @@ export function seed(): FamilyData {
   const members: Member[] = [
     { id: 'p', name: 'Patrick', role: 'parent', color: '#4A5B8C' , links: [] },
     { id: 'e', name: 'Elizabeth', role: 'parent', color: '#0F8B8D' , links: [] },
-    { id: 'c', name: 'Cannon', role: 'kid', age: 10, color: '#3D6DE8', photo: 'assets/cannon.png' , links: [] },
-    { id: 'h', name: 'Hadley', role: 'kid', age: 8, color: '#8B5CF6' , links: [] },
+    { id: 'c', name: 'Cannon', role: 'kid', age: 9, color: '#3D6DE8', photo: 'assets/cannon.png' , links: [] },
+    { id: 'h', name: 'Hadley', role: 'kid', age: 7, color: '#8B5CF6' , links: [] },
     { id: 'r', name: 'Rowan', role: 'kid', age: 4, color: '#31A05F', photo: 'assets/rowan.png' , links: [] },
   ]
 
@@ -189,8 +189,9 @@ export function seed(): FamilyData {
       { id: uid(), title: 'Beach week — OBX', date: addDays(td, 8), memberId: null },
       { id: uid(), title: 'First day of school', date: onDate(8, 20), memberId: null },
       { id: uid(), title: "Rowan's birthday — turning 5", date: onDate(9, 10), memberId: 'r' },
+      { id: uid(), title: "Hadley's birthday — turning 8", date: onDate(10, 26), memberId: 'h' },
+      { id: uid(), title: "Cannon's birthday — turning 10", date: onDate(1, 1), memberId: 'c' },
       { id: uid(), title: "Cannon's swim meet", date: addDays(td, 9), memberId: 'c' },
-      { id: uid(), title: "Hadley's birthday", date: addDays(td, 50), memberId: 'h' },
     ],
     settings: {
       pin: '1234',
