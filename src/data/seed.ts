@@ -66,7 +66,7 @@ export function seed(): FamilyData {
     { id: 'e', name: 'Elizabeth', role: 'parent', color: '#0F8B8D' , links: [] },
     { id: 'c', name: 'Cannon', role: 'kid', age: 10, color: '#3D6DE8', photo: 'assets/cannon.png' , links: [] },
     { id: 'h', name: 'Hadley', role: 'kid', age: 8, color: '#8B5CF6' , links: [] },
-    { id: 'r', name: 'Rowan', role: 'kid', age: 5, color: '#31A05F', photo: 'assets/rowan.png' , links: [] },
+    { id: 'r', name: 'Rowan', role: 'kid', age: 4, color: '#31A05F', photo: 'assets/rowan.png' , links: [] },
   ]
 
   const events = [
