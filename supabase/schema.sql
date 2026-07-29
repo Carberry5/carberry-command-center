@@ -387,6 +387,9 @@ create table if not exists public.oauth_tokens (
   id            text primary key,
   household_id  text not null references public.households(id) on delete cascade,
   provider      text not null,
+  -- Which family member this account belongs to, so a sync knows whose
+  -- fit_stats row to write. Patrick's WHOOP, Elizabeth's Oura.
+  member_id     text,
   access_token  text,
   refresh_token text,
   expires_at    timestamptz,
@@ -571,6 +574,7 @@ alter table public.members add column if not exists sort_order integer default 0
 alter table public.oauth_tokens add column if not exists id text;
 alter table public.oauth_tokens add column if not exists household_id text;
 alter table public.oauth_tokens add column if not exists provider text;
+alter table public.oauth_tokens add column if not exists member_id text;
 alter table public.oauth_tokens add column if not exists access_token text;
 alter table public.oauth_tokens add column if not exists refresh_token text;
 alter table public.oauth_tokens add column if not exists expires_at timestamp with time zone;
