@@ -99,17 +99,21 @@ export function seed(): FamilyData {
 
   const favorites = [
     { id: uid(), name: 'Taco night', tag: 'Crowd favorite' },
-    { id: uid(), name: 'One-pot spaghetti', tag: '30 min' },
+    { id: uid(), name: 'Pork Belly Candy', tag: 'Weekend treat' },
+    { id: uid(), name: 'Chicken Nuggets & French Fries', tag: 'Kids pick' },
+    { id: uid(), name: 'Steak', tag: 'Weekend' },
+    { id: uid(), name: 'Sushi', tag: 'Takeout' },
+    { id: uid(), name: 'Seafood', tag: '' },
+    { id: uid(), name: 'Asian', tag: '' },
     { id: uid(), name: 'Sheet-pan chicken & veg', tag: 'Easy' },
     { id: uid(), name: 'Homemade pizza', tag: 'Friday classic' },
     { id: uid(), name: 'Breakfast-for-dinner', tag: 'Kids pick' },
     { id: uid(), name: 'Teriyaki salmon bowls', tag: 'Healthy' },
-    { id: uid(), name: 'Slow-cooker chili', tag: 'Make ahead' },
     { id: uid(), name: 'Mac & cheese + broccoli', tag: '15 min' },
   ]
 
   const mealPlan: Record<string, string> = {
-    [addDays(td, -1)]: 'One-pot spaghetti',
+    [addDays(td, -1)]: 'Steak',
     [td]: 'Taco night',
     [addDays(td, 1)]: 'Sheet-pan chicken & veg',
     [addDays(td, 2)]: 'Homemade pizza',
