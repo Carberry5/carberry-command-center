@@ -249,7 +249,8 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
     l.items.forEach((it, ii) => {
       rows.list_items.push({
         id: it.id, list_id: l.id, household_id: hh, text: it.text,
-        done: it.done, by_member_id: it.by ?? null, sort_order: ii,
+        done: it.done, by_member_id: it.by ?? null, source: it.src ?? null,
+        sort_order: ii,
       })
     })
   })
@@ -437,6 +438,10 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
       text: str(it.text),
       done: it.done === true,
       by: str(it.by_member_id),
+      // Omitted rather than set to undefined: toRows/diff compare canonicalised
+      // objects, and a present-but-undefined key is not the same string as an
+      // absent one, which would make every app-typed item look changed.
+      ...(it.source == null ? {} : { src: str(it.source) }),
     })),
   }))
 

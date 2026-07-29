@@ -39,5 +39,8 @@ psql "$PGURL" -v ON_ERROR_STOP=1 -q -f supabase/schema.sql 2>&1 | grep -vi '^NOT
 echo "==> RLS"
 psql "$PGURL" -v ON_ERROR_STOP=1 -f supabase/rls-test.sql 2>&1 | sed -n 's/^psql.*NOTICE:  /  /p;/PASSED/p'
 
+echo "==> list ingest (iCloud Reminders)"
+psql "$PGURL" -v ON_ERROR_STOP=1 -f supabase/ingest-test.sql 2>&1 | sed -n 's/^psql.*NOTICE:  /  /p'
+
 echo "==> cloudSync"
 npx tsx scripts/cloudsync-test.ts

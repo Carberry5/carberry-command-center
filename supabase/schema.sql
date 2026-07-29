@@ -240,6 +240,12 @@ create table if not exists public.list_items (
   text           text not null default '',
   done           boolean not null default false,
   by_member_id   text,
+  -- Where the item came from. null = somebody typed it in the app. 'reminders'
+  -- = it arrived from an iCloud Reminders list through ingest_list(), and that
+  -- job owns it: on the next ingest, reminders rows absent from the payload are
+  -- removed and app rows are left alone. Without this column the two sources
+  -- would fight over the same list.
+  source         text,
   sort_order     integer not null default 0
 );
 
@@ -538,6 +544,7 @@ alter table public.list_items add column if not exists household_id text;
 alter table public.list_items add column if not exists text text default ''::text;
 alter table public.list_items add column if not exists done boolean default false;
 alter table public.list_items add column if not exists by_member_id text;
+alter table public.list_items add column if not exists source text;
 alter table public.list_items add column if not exists sort_order integer default 0;
 
 -- lists
@@ -619,6 +626,179 @@ alter table public.secrets add column if not exists label text default ''::text;
 alter table public.secrets add column if not exists ref text default ''::text;
 alter table public.secrets add column if not exists note text;
 alter table public.secrets add column if not exists sort_order integer default 0;
+-- ---------------------------------------------------------------------------
+-- List ingest — iCloud Reminders and anything else that can make an HTTP POST
+--
+-- Apple publishes no Reminders API, and an icloud.com/reminders/… link is a
+-- share invitation rather than a feed — nothing can fetch data from it. What a
+-- phone *can* do is run a Shortcut that reads the list locally and posts it
+-- somewhere. This is the somewhere.
+--
+-- The caller presents a token, not a Supabase key. Only its SHA-256 lives here,
+-- so a database dump does not hand anyone the ability to write; and the token
+-- resolves to exactly one household and one list, so the worst a leaked one can
+-- do is rewrite that grocery list. Compare that to the alternative of putting a
+-- service role key on a phone, which would bypass RLS for every household.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.list_ingest_tokens (
+  id            text primary key,
+  household_id  text not null references public.households(id) on delete cascade,
+  -- The list this token may write. Created on first use if absent.
+  list_name     text not null,
+  -- hex sha256 of the token. The token itself is shown once, at mint time.
+  token_hash    text not null unique,
+  -- Items land attributed to this member, so the list shows who added them.
+  member_id     text,
+  label         text,
+  created_at    timestamptz not null default now(),
+  last_used_at  timestamptz
+);
+
+alter table public.list_ingest_tokens add column if not exists household_id text;
+alter table public.list_ingest_tokens add column if not exists list_name text;
+alter table public.list_ingest_tokens add column if not exists token_hash text;
+alter table public.list_ingest_tokens add column if not exists member_id text;
+alter table public.list_ingest_tokens add column if not exists label text;
+alter table public.list_ingest_tokens add column if not exists created_at timestamptz default now();
+alter table public.list_ingest_tokens add column if not exists last_used_at timestamptz;
+
+create index if not exists list_ingest_tokens_household_idx
+  on public.list_ingest_tokens(household_id);
+
+/**
+ * Replaces the reminders-sourced items of one list.
+ *
+ * `p_items` is the list as the phone sees it right now — the incomplete items.
+ * Anything reminders-sourced that is not in the payload has been checked off or
+ * deleted upstream, so it goes; anything a person typed into the app stays.
+ *
+ * Item ids are derived from the list and the text, so re-posting an unchanged
+ * list produces byte-identical rows. That matters: cloudSync diffs snapshots,
+ * and churning ids would make every device see a change every five minutes.
+ */
+create or replace function public.ingest_list(p_token text, p_items text[])
+returns json
+language plpgsql
+security definer
+-- Pinned: a SECURITY DEFINER function that resolves unqualified names through
+-- the caller's search_path is how privilege escalation happens.
+set search_path = public, pg_temp
+as $$
+declare
+  tok        public.list_ingest_tokens%rowtype;
+  v_list_id  text;
+  v_clean    text[];
+  v_added    int;
+  v_removed  int;
+  v_kept     int;
+begin
+  if p_items is null then
+    raise exception 'items is required' using errcode = '22023';
+  end if;
+  -- A grocery list is tens of items. A million-element array is either a bug or
+  -- somebody probing, and either way should not become a million rows.
+  if array_length(p_items, 1) > 500 then
+    raise exception 'too many items (max 500)' using errcode = '22023';
+  end if;
+
+  select * into tok
+    from public.list_ingest_tokens
+   where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+  if not found then
+    -- Deliberately not "no such token": the caller learns only that it failed.
+    raise exception 'invalid ingest token' using errcode = '28000';
+  end if;
+
+  -- Normalise once: trimmed, non-empty, de-duplicated case-insensitively,
+  -- payload order preserved. A local array rather than a temp table, because a
+  -- temp table declared `on commit drop` survives until the *transaction*
+  -- commits — so two calls in one transaction collide on the second create.
+  -- Each RPC call is its own transaction in production, but a test suite or a
+  -- batch job is not, and this should not be a trap.
+  select array_agg(txt order by ord) into v_clean
+    from (
+      select (array_agg(btrim(u.t) order by u.ord))[1] as txt, min(u.ord) as ord
+        from unnest(p_items) with ordinality as u(t, ord)
+       where btrim(u.t) <> ''
+       group by lower(btrim(u.t))
+    ) s;
+  -- All blank, or an empty list: everything has been checked off upstream.
+  v_clean := coalesce(v_clean, array[]::text[]);
+
+  select id into v_list_id
+    from public.lists
+   where household_id = tok.household_id and lower(name) = lower(tok.list_name)
+   order by sort_order
+   limit 1;
+
+  if v_list_id is null then
+    v_list_id := 'ingest:' || tok.id;
+    insert into public.lists (id, household_id, name, sort_order)
+    values (v_list_id, tok.household_id, tok.list_name,
+            coalesce((select max(sort_order) + 1 from public.lists
+                       where household_id = tok.household_id), 0));
+  end if;
+
+  -- Gone from the phone's list, so gone from ours. Scoped to source =
+  -- 'reminders' so nothing anybody typed in the app is ever deleted here.
+  with removed as (
+    delete from public.list_items li
+     where li.list_id = v_list_id
+       and li.source = 'reminders'
+       and not exists (select 1 from unnest(v_clean) c where lower(c) = lower(li.text))
+    returning 1
+  )
+  select count(*) into v_removed from removed;
+
+  -- New to us. Matched case-insensitively against every item already in the
+  -- list, whatever its source, so an item somebody typed by hand does not
+  -- reappear as a second copy the moment it shows up in Reminders too.
+  with added as (
+    insert into public.list_items (id, list_id, household_id, text, done, by_member_id, source, sort_order)
+    select 'rem:' || md5(v_list_id || '|' || lower(i.text)),
+           v_list_id, tok.household_id, i.text, false, tok.member_id, 'reminders',
+           -- Grouped after whatever the family typed, rather than interleaved
+           -- into their ordering.
+           1000 + i.ord
+      from unnest(v_clean) with ordinality as i(text, ord)
+     where not exists (
+       select 1 from public.list_items li
+        where li.list_id = v_list_id and lower(li.text) = lower(i.text)
+     )
+    on conflict (id) do nothing
+    returning 1
+  )
+  select count(*) into v_added from added;
+
+  select count(*) into v_kept from public.list_items where list_id = v_list_id;
+
+  update public.list_ingest_tokens set last_used_at = now() where id = tok.id;
+
+  return json_build_object(
+    'list_id', v_list_id,
+    'list_name', tok.list_name,
+    'added', v_added,
+    'removed', v_removed,
+    'total', v_kept
+  );
+end
+$$;
+
+-- Callable by an unauthenticated caller — the token is the credential, and a
+-- Shortcut has no Supabase session. EXECUTE is revoked from PUBLIC first
+-- because Postgres grants it to PUBLIC by default, which would also expose it
+-- to any future role.
+revoke all on function public.ingest_list(text, text[]) from public;
+grant execute on function public.ingest_list(text, text[]) to anon, authenticated;
+
+-- The token table itself is unreachable from any browser role: RLS on with no
+-- policy, and no grants. Only the service role (scripts/list-token.ts) and the
+-- SECURITY DEFINER function above can see it.
+alter table public.list_ingest_tokens enable row level security;
+alter table public.list_ingest_tokens force row level security;
+revoke all on public.list_ingest_tokens from anon, authenticated;
+
 -- ---------------------------------------------------------------------------
 -- Row level security
 -- ---------------------------------------------------------------------------

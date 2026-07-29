@@ -233,6 +233,56 @@ async function main() {
   await db.query('delete from public.member_links where household_id = $1', [HH])
   back.member_links = []
 
+  // --- reminders-sourced list items -----------------------------------------
+
+  // ingest_list() marks the rows it owns with source = 'reminders'. If that
+  // column does not survive FamilyData -> rows -> FamilyData, the next device
+  // edit upserts the row with source null, the ingest stops recognising its own
+  // items, and every post re-adds them as duplicates. Nothing about that would
+  // look like an error.
+  console.log('\nreminders-sourced list items')
+  const groceries = data.lists[0]
+  await db.query(
+    `insert into public.list_items (id, list_id, household_id, text, done, by_member_id, source, sort_order)
+     values ($1,$2,$3,$4,$5,$6,$7,$8)`,
+    ['rem:test', groceries.id, HH, 'Oat milk', false, 'e', 'reminders', 1001]
+  )
+  back.list_items = (
+    await db.query('select * from public.list_items where household_id = $1', [HH])
+  ).rows as Row[]
+
+  const withRem = fromRows(back, data)
+  const remItem = withRem.lists[0].items.find((i) => i.id === 'rem:test')
+  assert.equal(remItem?.src, 'reminders', 'source did not survive the read')
+  ok('an ingested item comes back tagged src = reminders')
+
+  const typed = withRem.lists[0].items.find((i) => i.id !== 'rem:test')
+  assert.ok(typed && !('src' in typed), 'an app-typed item should have no src key at all')
+  ok('an app-typed item carries no src key (absent, not undefined)')
+
+  const remRows = toRows(withRem, HH)
+  const remRow = remRows.list_items.find((r) => r.id === 'rem:test')
+  assert.equal(remRow?.source, 'reminders', 'source was dropped on the way back to rows')
+  ok('and survives the trip back to a row')
+
+  assert.deepEqual(diff(withRem, withRem, HH), [], 'a snapshot should not differ from itself')
+  ok('a mixed-source list is stable under the differ')
+
+  // The case that would actually bite: edit something else in the same list and
+  // confirm the ingested row is not dragged into the write with source lost.
+  const renamed = structuredClone(withRem)
+  renamed.lists[0].items[0].text = 'Whole milk'
+  const renameMut = diff(withRem, renamed, HH)
+  const touched = renameMut.find((m) => m.table === 'list_items')?.upsert ?? []
+  assert.equal(touched.length, 1, 'renaming one item should upsert exactly one row')
+  assert.notEqual(touched[0].id, 'rem:test', 'the ingested row should not be rewritten')
+  ok('editing a neighbouring item leaves the ingested row alone')
+
+  await db.query('delete from public.list_items where id = $1', ['rem:test'])
+  back.list_items = (
+    await db.query('select * from public.list_items where household_id = $1', [HH])
+  ).rows as Row[]
+
   // --- feed events are read-only to the client ------------------------------
 
   console.log('\nICS feed events')
