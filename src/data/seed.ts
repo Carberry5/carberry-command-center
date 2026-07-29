@@ -50,13 +50,23 @@ export function seed(): FamilyData {
     d.setDate(d.getDate() - dow + target + weeks * 7)
     return ymd(d)
   }
+  /**
+   * A fixed calendar date — birthdays, first day of school. Rolls to next year
+   * once it's past, so a countdown that has come and gone starts counting to the
+   * next one instead of sitting at zero forever.
+   */
+  const onDate = (month: number, day: number) => {
+    const d = new Date(t.getFullYear(), month - 1, day)
+    if (ymd(d) < td) d.setFullYear(d.getFullYear() + 1)
+    return ymd(d)
+  }
 
   const members: Member[] = [
     { id: 'p', name: 'Patrick', role: 'parent', color: '#4A5B8C' , links: [] },
     { id: 'e', name: 'Elizabeth', role: 'parent', color: '#0F8B8D' , links: [] },
-    { id: 'c', name: 'Cannon', role: 'kid', age: 10, color: '#3D6DE8', photo: 'assets/cannon.png' , links: [] },
-    { id: 'h', name: 'Hadley', role: 'kid', age: 8, color: '#8B5CF6' , links: [] },
-    { id: 'r', name: 'Rowan', role: 'kid', age: 5, color: '#31A05F', photo: 'assets/rowan.png' , links: [] },
+    { id: 'c', name: 'Cannon', role: 'kid', age: 9, color: '#3D6DE8', photo: 'assets/cannon.png' , links: [] },
+    { id: 'h', name: 'Hadley', role: 'kid', age: 7, color: '#8B5CF6' , links: [] },
+    { id: 'r', name: 'Rowan', role: 'kid', age: 4, color: '#31A05F', photo: 'assets/rowan.png' , links: [] },
   ]
 
   const events = [
@@ -80,6 +90,9 @@ export function seed(): FamilyData {
     { id: 'c4', title: 'Reading & homework', memberIds: ['c', 'h'], days: [1, 2, 3, 4, 5], stars: 2 },
     { id: 'c5', title: 'Clean your room', memberIds: ['c', 'h', 'r'], days: [3, 6], stars: 2 },
     { id: 'c6', title: 'Sleep in your own bed', memberIds: ['h', 'r'], days: [0, 1, 2, 3, 4, 5, 6], stars: 2 },
+    { id: 'c7', title: 'Feed the dogs', memberIds: ['c', 'h', 'r'], days: [0, 1, 2, 3, 4, 5, 6], stars: 1 },
+    { id: 'c8', title: 'Take the trash out', memberIds: ['c', 'h'], days: [1, 4], stars: 2 },
+    { id: 'c9', title: 'Put your laundry away', memberIds: ['c', 'h', 'r'], days: [0, 3], stars: 2 },
   ]
 
   // A week of plausible history so the star chart and balances aren't empty.
@@ -174,9 +187,11 @@ export function seed(): FamilyData {
     ],
     countdowns: [
       { id: uid(), title: 'Beach week — OBX', date: addDays(td, 8), memberId: null },
-      { id: uid(), title: 'First day of school', date: addDays(td, 27), memberId: null },
+      { id: uid(), title: 'First day of school', date: onDate(8, 20), memberId: null },
+      { id: uid(), title: "Rowan's birthday — turning 5", date: onDate(9, 10), memberId: 'r' },
+      { id: uid(), title: "Hadley's birthday — turning 8", date: onDate(10, 26), memberId: 'h' },
+      { id: uid(), title: "Cannon's birthday — turning 10", date: onDate(1, 1), memberId: 'c' },
       { id: uid(), title: "Cannon's swim meet", date: addDays(td, 9), memberId: 'c' },
-      { id: uid(), title: "Hadley's birthday", date: addDays(td, 50), memberId: 'h' },
     ],
     settings: {
       pin: '1234',
