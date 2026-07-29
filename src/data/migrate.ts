@@ -23,10 +23,11 @@ export function migrate(input: Partial<FamilyData> | null | undefined): FamilyDa
   d.members = (input.members ?? []).map((m) => ({
     ...m,
     color: COLOR_MIGRATION[m.color] ?? m.color,
+    links: m.links ?? [],
   }))
 
   if (!d.members.some((m) => m.id === 'p' || /^patrick$/i.test(m.name))) {
-    d.members.unshift({ id: 'p', name: 'Patrick', role: 'parent', color: '#4A5B8C' })
+    d.members.unshift({ id: 'p', name: 'Patrick', role: 'parent', color: '#4A5B8C', links: [] })
   }
   const rowan = d.members.find((m) => /^rowan$/i.test(m.name))
   if (rowan) rowan.photo = 'assets/rowan.png'

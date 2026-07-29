@@ -195,6 +195,44 @@ async function main() {
   }
   ok(`all ${WRITE_ORDER.length} upsert conflict targets are backed by unique indexes`)
 
+  // --- member links ----------------------------------------------------------
+
+  console.log('\nmember links')
+  const linked = structuredClone(data)
+  linked.members[2].links = [
+    { id: 'ln_sch', label: 'Schoology', url: 'https://app.schoology.com/home' },
+    { id: 'ln_tc', label: 'Transparent Classroom', url: 'https://www.transparentclassroom.com/s/2707' },
+  ]
+  const linkMut = diff(data, linked, HH)
+  assert.equal(linkMut.length, 1, 'adding links should touch one table')
+  assert.equal(linkMut[0].table, 'member_links')
+  assert.equal(linkMut[0].upsert.length, 2)
+  ok('adding two links -> 2 member_links rows, nothing else')
+
+  for (const row of linkMut[0].upsert) {
+    const cols = Object.keys(row)
+    await db.query(
+      `insert into public.member_links (${cols.map((c) => `"${c}"`).join(', ')})
+       values (${cols.map((_, i) => `$${i + 1}`).join(', ')})`,
+      cols.map((c) => row[c])
+    )
+  }
+  back.member_links = (
+    await db.query('select * from public.member_links where household_id = $1', [HH])
+  ).rows as Row[]
+  const withLinks = fromRows(back, data)
+  assert.deepEqual(withLinks.members[2].links, linked.members[2].links, 'links did not round-trip')
+  ok('member links round-trip in order, attached to the right member')
+
+  const unlinked = structuredClone(linked)
+  unlinked.members[2].links = []
+  const rm = diff(linked, unlinked, HH)
+  assert.equal(rm[0].remove.length, 2)
+  ok('clearing links -> 2 deletes')
+
+  await db.query('delete from public.member_links where household_id = $1', [HH])
+  back.member_links = []
+
   // --- feed events are read-only to the client ------------------------------
 
   console.log('\nICS feed events')

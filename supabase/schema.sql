@@ -87,6 +87,20 @@ create table if not exists public.members (
 
 create index if not exists members_household_idx on public.members(household_id);
 
+-- Shortcuts shown on a member's page — school portals and the like. Plain
+-- links, no credentials: they open in a new tab and whatever is behind them
+-- does its own authentication.
+create table if not exists public.member_links (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  member_id    text not null,
+  label        text not null default '',
+  url          text not null default '',
+  sort_order   integer not null default 0
+);
+
+create index if not exists member_links_member_idx on public.member_links(household_id, member_id);
+
 -- ---------------------------------------------------------------------------
 -- Calendar
 -- ---------------------------------------------------------------------------
@@ -534,6 +548,14 @@ alter table public.meal_plan add column if not exists household_id text;
 alter table public.meal_plan add column if not exists day date;
 alter table public.meal_plan add column if not exists meal text default ''::text;
 
+-- member_links
+alter table public.member_links add column if not exists id text;
+alter table public.member_links add column if not exists household_id text;
+alter table public.member_links add column if not exists member_id text;
+alter table public.member_links add column if not exists label text default ''::text;
+alter table public.member_links add column if not exists url text default ''::text;
+alter table public.member_links add column if not exists sort_order integer default 0;
+
 -- members
 alter table public.members add column if not exists id text;
 alter table public.members add column if not exists household_id text;
@@ -602,7 +624,7 @@ declare
   t text;
   -- Every household-scoped table gets the same policy shape.
   scoped text[] := array[
-    'members', 'events', 'event_members', 'chores', 'chore_members', 'chore_log',
+    'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members', 'chore_log',
     'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists', 'list_items',
     'countdowns', 'feeds', 'secrets', 'preflight_kids', 'preflight_bring',
     'fit_stats', 'greenlight', 'greenlight_payouts'
@@ -679,7 +701,7 @@ do $$
 declare
   t text;
   watched text[] := array[
-    'households', 'members', 'events', 'event_members', 'chores', 'chore_members',
+    'households', 'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members',
     'chore_log', 'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists',
     'list_items', 'countdowns', 'feeds', 'feed_events', 'secrets', 'preflight_kids',
     'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts'

@@ -45,6 +45,7 @@ export type Row = Record<string, unknown>
 export interface TableRows {
   households: Row[]
   members: Row[]
+  member_links: Row[]
   events: Row[]
   event_members: Row[]
   chores: Row[]
@@ -78,6 +79,7 @@ export type TableName = keyof TableRows
 export const PRIMARY_KEYS: Record<TableName, string[]> = {
   households: ['id'],
   members: ['id'],
+  member_links: ['id'],
   events: ['id'],
   event_members: ['event_id', 'member_id'],
   chores: ['id'],
@@ -106,6 +108,7 @@ export const PRIMARY_KEYS: Record<TableName, string[]> = {
 export const WRITE_ORDER: TableName[] = [
   'households',
   'members',
+  'member_links',
   'events',
   'event_members',
   'chores',
@@ -129,7 +132,7 @@ export const WRITE_ORDER: TableName[] = [
 
 function emptyRows(): TableRows {
   return {
-    households: [], members: [], events: [], event_members: [], chores: [],
+    households: [], members: [], member_links: [], events: [], event_members: [], chores: [],
     chore_members: [], chore_log: [], rewards: [], redemptions: [], favorites: [],
     meal_plan: [], lists: [], list_items: [], countdowns: [], feeds: [],
     secrets: [], preflight_kids: [], preflight_bring: [], fit_stats: [],
@@ -166,6 +169,11 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
       age: m.age ?? null,
       photo: m.photo ?? null,
       sort_order: i,
+    })
+    ;(m.links ?? []).forEach((l, li) => {
+      rows.member_links.push({
+        id: l.id, household_id: hh, member_id: m.id, label: l.label, url: l.url, sort_order: li,
+      })
     })
   })
 
@@ -334,6 +342,13 @@ const day = (v: unknown): string => str(v).slice(0, 10)
 export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = []): FamilyData {
   const hh = rows.households[0] ?? {}
 
+  const linksByMember = new Map<string, Row[]>()
+  for (const r of rows.member_links) {
+    const list = linksByMember.get(str(r.member_id)) ?? []
+    list.push(r)
+    linksByMember.set(str(r.member_id), list)
+  }
+
   const members: Member[] = [...rows.members].sort(bySort).map((r) => ({
     id: str(r.id),
     name: str(r.name),
@@ -341,6 +356,9 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     color: str(r.color, '#4A5B8C'),
     ...(r.age == null ? {} : { age: num(r.age) }),
     ...(r.photo == null ? {} : { photo: str(r.photo) }),
+    links: (linksByMember.get(str(r.id)) ?? []).sort(bySort).map((l) => ({
+      id: str(l.id), label: str(l.label), url: str(l.url),
+    })),
   }))
 
   const eventMembers = new Map<string, string[]>()

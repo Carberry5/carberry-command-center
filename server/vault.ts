@@ -206,6 +206,9 @@ function parseFamily(src: string): FamilyDoc | null {
       color: String(m.color ?? '#8A63C9'),
       ...(m.age !== undefined && m.age !== null ? { age: Number(m.age) } : {}),
       ...(m.photo ? { photo: String(m.photo) } : {}),
+      links: Array.isArray(m.links)
+        ? m.links.map((l) => ({ id: String(l.id ?? uid()), label: String(l.label ?? ''), url: String(l.url ?? '') }))
+        : [],
     })),
     settings: {
       pin: String(front.pin ?? '1234'),

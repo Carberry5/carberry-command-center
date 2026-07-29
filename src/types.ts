@@ -5,6 +5,13 @@
 
 export type Role = 'parent' | 'kid'
 
+/** A shortcut on a member's page — school portal, team site, reading log. */
+export interface MemberLink {
+  id: string
+  label: string
+  url: string
+}
+
 export interface Member {
   id: string
   name: string
@@ -13,6 +20,8 @@ export interface Member {
   age?: number
   /** Path under /assets, or a data URI. */
   photo?: string
+  /** Places to check this member's progress: Schoology, Transparent Classroom… */
+  links: MemberLink[]
 }
 
 export interface FamilyEvent {

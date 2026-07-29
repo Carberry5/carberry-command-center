@@ -51,6 +51,7 @@ export function SettingsPage() {
   const [zipMsg, setZipMsg] = useState('')
   const [newPin, setNewPin] = useState('')
   const [bringDraft, setBringDraft] = useState<Record<string, string>>({})
+  const [linkDraft, setLinkDraft] = useState<Record<string, { label: string; url: string }>>({})
 
   const kids = data.members.filter((m) => m.role === 'kid')
 
@@ -91,7 +92,7 @@ export function SettingsPage() {
           <button
             onClick={() =>
               update((d) => {
-                d.members.push({ id: uid(), name: 'New member', role: 'kid', color: '#2E9E6B' })
+                d.members.push({ id: uid(), name: 'New member', role: 'kid', color: '#2E9E6B', links: [] })
               })
             }
             style={{ ...primary, padding: '9px 15px', fontSize: '.82em' }}
@@ -198,6 +199,83 @@ export function SettingsPage() {
             >
               Remove
             </button>
+
+            {/* Shortcuts shown on this member's page — school portals and the
+                like. Just links; whatever is behind them handles its own login. */}
+            <div style={{ flexBasis: '100%', display: 'flex', gap: 6, flexWrap: 'wrap', paddingLeft: 44 }}>
+              {(m.links ?? []).map((l) => (
+                <span
+                  key={l.id}
+                  title={l.url}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: 6,
+                    borderRadius: 999,
+                    padding: '5px 8px 5px 12px',
+                    fontWeight: 700,
+                    fontSize: '.76em',
+                    background: 'rgba(35,42,61,.05)',
+                  }}
+                >
+                  {l.label}
+                  <button
+                    onClick={() =>
+                      update((d) => {
+                        const t = d.members.find((x) => x.id === m.id)
+                        if (t) t.links = (t.links ?? []).filter((x) => x.id !== l.id)
+                      })
+                    }
+                    aria-label={`Remove ${l.label}`}
+                    style={{
+                      border: 'none',
+                      background: 'none',
+                      cursor: 'pointer',
+                      color: line(0.5),
+                      fontWeight: 700,
+                      padding: '0 2px',
+                    }}
+                  >
+                    ✕
+                  </button>
+                </span>
+              ))}
+              <input
+                value={linkDraft[m.id]?.label ?? ''}
+                onChange={(e) =>
+                  setLinkDraft((p) => ({ ...p, [m.id]: { ...(p[m.id] ?? { label: '', url: '' }), label: e.target.value } }))
+                }
+                placeholder="Link name"
+                style={{ ...smallInput, width: 120, fontSize: '.8em', padding: '6px 9px' }}
+              />
+              <input
+                value={linkDraft[m.id]?.url ?? ''}
+                onChange={(e) =>
+                  setLinkDraft((p) => ({ ...p, [m.id]: { ...(p[m.id] ?? { label: '', url: '' }), url: e.target.value } }))
+                }
+                placeholder="https://…"
+                style={{ ...smallInput, flex: 1, minWidth: 180, fontSize: '.8em', padding: '6px 9px' }}
+              />
+              <button
+                onClick={() => {
+                  const draft = linkDraft[m.id]
+                  const url = draft?.url?.trim()
+                  if (!url) return
+                  update((d) => {
+                    const t = d.members.find((x) => x.id === m.id)
+                    if (!t) return
+                    t.links = [
+                      ...(t.links ?? []),
+                      { id: uid(), label: draft.label.trim() || new URL(url, 'https://x').hostname, url },
+                    ]
+                  })
+                  setLinkDraft((p) => ({ ...p, [m.id]: { label: '', url: '' } }))
+                }}
+                style={{ ...primary, padding: '6px 12px', fontSize: '.78em' }}
+              >
+                + Link
+              </button>
+            </div>
           </div>
         ))}
       </div>
