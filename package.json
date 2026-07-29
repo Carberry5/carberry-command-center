@@ -13,7 +13,8 @@
     "start": "node --import tsx server/index.ts --serve-static",
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs",
-    "test:cloud": "bash scripts/cloud-test.sh"
+    "test:cloud": "bash scripts/cloud-test.sh",
+    "test:seed": "tsx scripts/seed-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
