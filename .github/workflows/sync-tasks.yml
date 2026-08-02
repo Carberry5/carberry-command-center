@@ -11,10 +11,14 @@ name: Sync Google Tasks
 #   GOOGLE_CLIENT_ID
 #   GOOGLE_CLIENT_SECRET
 #
-# If this starts failing weekly with "refresh rejected", the OAuth client is
-# still in Testing on the Google Auth Platform console — refresh tokens expire
-# after 7 days there. Publish the app (unverified is fine for one family) and
-# reconnect once.
+# If this fails roughly weekly with "refresh rejected", that is the OAuth client
+# sitting in Testing on the Google Auth Platform console, where refresh tokens
+# expire after 7 days. Re-run scripts/google-connect.ts auth.
+#
+# Publishing the app is NOT the fix — `tasks` is a sensitive scope, and an app
+# in production without completed Google verification is refused outright with
+# "has not completed the Google verification process", which has no way past it.
+# Testing plus a test user is the working configuration. See docs/google-tasks.md.
 
 on:
   schedule:

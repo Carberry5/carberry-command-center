@@ -42,16 +42,23 @@ const TASKS_API = 'https://tasks.googleapis.com/tasks/v1'
 const REDIRECT_URI = process.env.GOOGLE_REDIRECT_URI ?? 'http://localhost:8910/'
 
 /**
- * tasks covers the grocery list. The other two are here so the Gmail -> Calendar
- * agent does not need a second trip through the consent screen; Google issues
- * one refresh token per client, and re-authorising for extra scopes invalidates
- * what is already stored.
+ * Deliberately just the one scope.
+ *
+ * gmail.readonly is a *restricted* scope, and calendar.events is *sensitive*.
+ * Both need Google verification before an app can leave Testing status — and
+ * for a restricted scope that means a CASA third-party security assessment,
+ * which takes months and costs money. Carrying gmail.readonly would make this
+ * client permanently unverifiable in practice, and Testing status expires
+ * refresh tokens after 7 days.
+ *
+ * Nothing is lost. The mail -> calendar agent reads Gmail and writes Calendar
+ * through the connectors already attached to the assistant, not through this
+ * OAuth client, so this client only ever needs the grocery list.
+ *
+ * Adding a scope later forces everyone through the consent screen again and
+ * invalidates the stored refresh token, so think before extending this.
  */
-const SCOPES = [
-  'https://www.googleapis.com/auth/tasks',
-  'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/calendar.events',
-]
+const SCOPES = ['https://www.googleapis.com/auth/tasks']
 
 const argv = process.argv.slice(2)
 const cmd = argv[0]
