@@ -16,6 +16,7 @@
  *   SUPABASE_URL=… SUPABASE_SERVICE_ROLE_KEY=… npx tsx scripts/sync-wearables.ts [--dry-run]
  */
 
+import './env.ts'
 import { createClient } from '@supabase/supabase-js'
 
 const DRY_RUN = process.argv.includes('--dry-run')
