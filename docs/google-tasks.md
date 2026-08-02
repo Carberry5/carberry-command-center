@@ -12,26 +12,57 @@ phone being awake — a scheduled Action does the work.
 Once, at [console.cloud.google.com](https://console.cloud.google.com).
 
 1. **New Project** — `carberry-command-center`, no organization.
-2. **APIs & Services → Library** → enable **Google Tasks API**, **Gmail API**
-   and **Google Calendar API**. Enable all three now; adding one later means
-   going back through the consent screen.
+2. **APIs & Services → Library** → enable the **Google Tasks API**. Only that
+   one — see *Why only one scope* below.
 3. **Google Auth Platform → Branding** (older console: *OAuth consent screen*) —
    User type **External**, fill in the app name and your email, skip the logo.
-4. **Data Access** → add these scopes:
+4. **Data Access** → add exactly one scope:
    ```
    https://www.googleapis.com/auth/tasks
-   https://www.googleapis.com/auth/gmail.readonly
-   https://www.googleapis.com/auth/calendar.events
    ```
-5. **Audience → Publish app.** ⚠️ This one matters: while the app is in
-   *Testing*, **refresh tokens expire after 7 days** and the sync silently stops
-   every week. Publish it. Verification is only needed to serve strangers —
-   unverified means a *"Google hasn't verified this app"* interstitial on first
-   sign-in, which you click through with **Advanced → Go to…**. The 100-user cap
-   is not a constraint for a family.
+5. **Audience → Test users → Add users** → the Google account whose task list
+   this is. Leave publishing status on **Testing**.
 6. **Clients → Create client** → application type **Desktop app**. Desktop
    clients accept any `http://localhost` port automatically, so there are no
    redirect URIs to register.
+
+### Do not publish the app
+
+This is counter-intuitive enough to be worth stating plainly, because getting it
+backwards blocks you completely.
+
+`tasks` is a **sensitive** scope. An app that requests one and is set to *In
+production* without completed Google verification is refused outright:
+
+> Access blocked: Carberry Command Center has not completed the Google
+> verification process
+
+There is no *Advanced → Go to…* link on that screen. The clickable
+*"Google hasn't verified this app"* interstitial — the one you *can* get past —
+appears in **Testing**, for accounts on the test-user list.
+
+So: stay in Testing, add yourself as a test user.
+
+The cost is real and worth knowing: **in Testing, refresh tokens expire after 7
+days**, so the sync stops weekly until you re-run `google-connect.ts auth`. The
+only way out is verification, which for a sensitive scope is a form and a demo
+video.
+
+### Why only one scope
+
+An earlier version of this asked for `gmail.readonly` and `calendar.events` too,
+so that a future mail → calendar agent would not need a second trip through
+consent. That was a mistake:
+
+- `gmail.readonly` is a **restricted** scope. Verifying it needs a CASA
+  third-party security assessment — months, and it costs money. Including it
+  makes the client permanently unverifiable in practice.
+- `calendar.events` is sensitive, and unused: the family's Google Calendar is
+  read through a secret iCal URL as an ordinary feed, deliberately one-way.
+
+Nothing is lost. The mail → calendar agent reads Gmail and writes Calendar
+through the connectors attached to the assistant, not through this OAuth client.
+This client only ever needs the grocery list.
 
 Put the two values in the repo at **Settings → Secrets and variables → Actions
 → Secrets** — as *Secrets*, not Variables; unlike the Supabase publishable key
@@ -112,8 +143,13 @@ device that is briefly behind wipes the shopping list.
 
 ## If it breaks
 
-**`refresh rejected (400)` every 7 days** — the OAuth client is still in
-*Testing*. Publish it (step 5) and reconnect.
+**`Access blocked: … has not completed the Google verification process`** — the
+app is set to *In production*. Set it **Back to testing** and add the account
+under **Audience → Test users**. See *Do not publish the app* above.
+
+**`refresh rejected (400)` roughly weekly** — expected while the app is in
+Testing, where refresh tokens live 7 days. Re-run `google-connect.ts auth`. The
+only permanent fix is Google verification.
 
 **`Google returned no refresh token`** — the account has already granted this
 client, and Google only issues a refresh token on a first consent. Remove the
