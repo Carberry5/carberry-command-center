@@ -14,7 +14,8 @@
     "typecheck": "tsc --noEmit",
     "smoke": "node scripts/smoke.mjs",
     "test:cloud": "bash scripts/cloud-test.sh",
-    "test:seed": "tsx scripts/seed-test.ts"
+    "test:seed": "tsx scripts/seed-test.ts",
+    "test:gtasks": "tsx scripts/gtasks-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

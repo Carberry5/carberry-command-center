@@ -246,8 +246,16 @@ create table if not exists public.list_items (
   -- removed and app rows are left alone. Without this column the two sources
   -- would fight over the same list.
   source         text,
+  -- The id this item has in the system it syncs with — a Google Tasks task id.
+  -- Without it there is no way to tell "the milk task, renamed" from "a new
+  -- task", so ticking something off here could not be reflected there and every
+  -- rename would arrive as a duplicate.
+  remote_id      text,
   sort_order     integer not null default 0
 );
+-- The unique index on remote_id is created after the column back-fill below,
+-- not here: on a database that already has list_items the create above is a
+-- no-op, so remote_id would not exist yet and the index would fail.
 
 create index if not exists list_items_list_idx on public.list_items(list_id, sort_order);
 create index if not exists list_items_household_idx on public.list_items(household_id);
@@ -400,6 +408,11 @@ create table if not exists public.oauth_tokens (
   refresh_token text,
   expires_at    timestamptz,
   scope         text,
+  -- Per-provider settings that are not credentials: for Google Tasks, which
+  -- task list feeds which of the family's lists. A jsonb blob rather than
+  -- columns, because every provider wants something different and none of it
+  -- is ever queried — the sync reads the whole row anyway.
+  config        jsonb not null default '{}'::jsonb,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now(),
   unique (household_id, provider)
@@ -545,6 +558,7 @@ alter table public.list_items add column if not exists text text default ''::tex
 alter table public.list_items add column if not exists done boolean default false;
 alter table public.list_items add column if not exists by_member_id text;
 alter table public.list_items add column if not exists source text;
+alter table public.list_items add column if not exists remote_id text;
 alter table public.list_items add column if not exists sort_order integer default 0;
 
 -- lists
@@ -586,6 +600,7 @@ alter table public.oauth_tokens add column if not exists access_token text;
 alter table public.oauth_tokens add column if not exists refresh_token text;
 alter table public.oauth_tokens add column if not exists expires_at timestamp with time zone;
 alter table public.oauth_tokens add column if not exists scope text;
+alter table public.oauth_tokens add column if not exists config jsonb default '{}'::jsonb;
 alter table public.oauth_tokens add column if not exists created_at timestamp with time zone default now();
 alter table public.oauth_tokens add column if not exists updated_at timestamp with time zone default now();
 
@@ -626,6 +641,20 @@ alter table public.secrets add column if not exists label text default ''::text;
 alter table public.secrets add column if not exists ref text default ''::text;
 alter table public.secrets add column if not exists note text;
 alter table public.secrets add column if not exists sort_order integer default 0;
+-- ---------------------------------------------------------------------------
+-- Indexes that depend on back-filled columns
+--
+-- These have to come after the section above, not next to their create table:
+-- on a database that already holds the table, `create table if not exists` is a
+-- no-op and the column only appears in the back-fill.
+-- ---------------------------------------------------------------------------
+
+-- Partial: only synced rows carry a remote id, and any number of app-typed
+-- items must be allowed to have none. Unique so one Google task cannot be
+-- claimed by two items, which would make a completion ambiguous.
+create unique index if not exists list_items_remote_idx
+  on public.list_items(household_id, remote_id) where remote_id is not null;
+
 -- ---------------------------------------------------------------------------
 -- List ingest — iCloud Reminders and anything else that can make an HTTP POST
 --

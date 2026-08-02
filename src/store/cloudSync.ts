@@ -250,7 +250,7 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
       rows.list_items.push({
         id: it.id, list_id: l.id, household_id: hh, text: it.text,
         done: it.done, by_member_id: it.by ?? null, source: it.src ?? null,
-        sort_order: ii,
+        remote_id: it.rid ?? null, sort_order: ii,
       })
     })
   })
@@ -442,6 +442,7 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
       // objects, and a present-but-undefined key is not the same string as an
       // absent one, which would make every app-typed item look changed.
       ...(it.source == null ? {} : { src: str(it.source) }),
+      ...(it.remote_id == null ? {} : { rid: str(it.remote_id) }),
     })),
   }))
 

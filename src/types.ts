@@ -93,6 +93,8 @@ export interface ListItem {
    * — the next post removes it if it has gone from the phone's list.
    */
   src?: string
+  /** Its id in the system it syncs with — a Google Tasks task id. */
+  rid?: string
 }
 
 export interface FamilyList {
