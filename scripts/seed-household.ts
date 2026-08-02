@@ -46,6 +46,7 @@
  * session. Run it from your own machine; it has no business in a browser.
  */
 
+import './env.ts'
 import { pathToFileURL } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
 import type { Chore, Countdown, FamilyData, FamilyEvent, Member } from '../src/types.ts'

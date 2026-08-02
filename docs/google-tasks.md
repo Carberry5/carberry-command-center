@@ -75,14 +75,24 @@ these are genuinely confidential:
 
 ## Connecting the account
 
-On your own machine, with the same two values in the environment:
+On your own machine. Set the credentials up once, in a gitignored file the
+scripts read automatically:
 
 ```bash
-export SUPABASE_URL=https://rdmlrmilkgalixiafbfg.supabase.co
-export SUPABASE_SERVICE_ROLE_KEY=…
-export GOOGLE_CLIENT_ID=…
-export GOOGLE_CLIENT_SECRET=…
+cp .env.example .env.local
+```
 
+Then open `.env.local` and fill in `SUPABASE_SERVICE_ROLE_KEY`,
+`GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Two things worth getting right:
+
+- The Supabase key is the one under **Secret keys** (`sb_secret_…`), not the
+  publishable key. You have to click **Reveal** to see it, which is the tell
+  that you have the right one. The publishable key cannot bypass RLS, so every
+  write would fail.
+- Never paste `.env.local` into a chat window, an issue or a commit. It is
+  gitignored precisely so it cannot be committed by accident.
+
+```bash
 npx tsx scripts/google-connect.ts auth --household carberry --member e
 ```
 

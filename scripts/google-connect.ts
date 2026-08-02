@@ -29,6 +29,7 @@
  *              GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET.
  */
 
+import './env.ts'
 import { createClient } from '@supabase/supabase-js'
 
 const AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth'

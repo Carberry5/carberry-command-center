@@ -16,6 +16,7 @@
  *   npx tsx scripts/sync-feeds.ts [--dry-run]
  */
 
+import './env.ts'
 import { createClient } from '@supabase/supabase-js'
 import { parseIcs } from '../src/lib/ics.ts'
 import type { FamilyEvent } from '../src/types.ts'

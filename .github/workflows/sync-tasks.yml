@@ -65,8 +65,13 @@ jobs:
             echo "::error::SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set."
             exit 1
           fi
+          # Not an error. The client credentials are only needed to refresh a
+          # stored token, and until somebody has run google-connect.ts there is
+          # no token and nothing to sync. Failing here would put a red run in
+          # the Actions tab every 20 minutes while the setup is half-done,
+          # which trains everyone to ignore this workflow.
           if [ -z "$GOOGLE_CLIENT_ID" ] || [ -z "$GOOGLE_CLIENT_SECRET" ]; then
-            echo "::error::GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET are not set. See docs/google-tasks.md."
-            exit 1
+            echo "::notice::Google Tasks not configured yet — skipping. See docs/google-tasks.md."
+            exit 0
           fi
           npx tsx scripts/sync-tasks.ts ${{ inputs.dry_run && '--dry-run' || '' }}

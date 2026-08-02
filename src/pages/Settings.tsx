@@ -594,18 +594,22 @@ export function SettingsPage() {
   )
 }
 
-/** ICS feeds. The sidecar fetches them server-side, which is what makes school calendars work. */
+/**
+ * ICS feeds. Fetching them is a server's job: calendar providers do not send
+ * CORS headers, so a browser cannot read a school or Google calendar at any
+ * price. In development a local sidecar does it; in production the scheduled
+ * GitHub Action does, writing into feed_events.
+ */
 function FeedsCard() {
-  const { data, update, toast, serverOk } = useFamily()
+  const { data, update, toast, serverOk, mode } = useFamily()
   const [draft, setDraft] = useState({ name: '', url: '' })
 
   const sync = async (id: string, name: string) => {
-    update((d) => {
-      const feed = d.settings.feeds.find((f) => f.id === id)
-      if (feed) feed.status = 'Syncing…'
-    })
-
     if (serverOk) {
+      update((d) => {
+        const feed = d.settings.feeds.find((f) => f.id === id)
+        if (feed) feed.status = 'Syncing…'
+      })
       const result = await syncFeedOnServer(id)
       if (result.error) {
         update((d) => {
@@ -619,33 +623,29 @@ function FeedsCard() {
       return
     }
 
-    // No sidecar — try from the browser and expect CORS to bite on most feeds.
-    const feed = data.settings.feeds.find((f) => f.id === id)
-    try {
-      const res = await fetch(feed!.url)
-      if (!res.ok) throw new Error(String(res.status))
-      const { parseIcs } = await import('../lib/ics.ts')
-      const events = parseIcs(await res.text())
-      update((d) => {
-        d.feedEv[id] = events
-        const target = d.settings.feeds.find((f) => f.id === id)
-        if (target) target.status = `${events.length} events · just synced`
-      })
-      toast(`Synced ${events.length} events from ${name}`)
-    } catch {
-      update((d) => {
-        const target = d.settings.feeds.find((f) => f.id === id)
-        if (target) target.status = 'Blocked by the browser (CORS) — start the sidecar to sync this'
-      })
+    // No server on this origin. This used to attempt the fetch from the browser
+    // anyway and, on the inevitable CORS failure, tell the family to "start the
+    // sidecar" — advice that has been wrong since the move off the vault, and
+    // that names a thing they do not have.
+    //
+    // Worse, it was wrong when it *worked*: a successful browser fetch wrote
+    // into feedEv, which fromRows rebuilds from the feed_events table, so the
+    // events disappeared again at the next snapshot. Better to be honest that
+    // this button cannot do the job than to appear to and then undo it.
+    if (mode === 'cloud') {
+      toast(`${name} syncs on a schedule — next run within 3 hours`)
+      return
     }
+    toast(`${name} needs a server to fetch it — run the app with npm run dev`)
   }
 
   return (
     <div style={{ ...card, padding: '20px 22px' }}>
       <h2 style={{ ...HEADING, fontSize: '1.2em', margin: '0 0 4px' }}>Calendar feeds</h2>
       <div style={{ color: line(0.58), fontWeight: 600, fontSize: '.85em', marginBottom: 12 }}>
-        Read-only ICS links (Google, Apple, Outlook, school). The sidecar fetches them for you, so
-        feeds that refuse browser requests still sync.
+        Read-only ICS links (Google, Apple, Outlook, school). Fetched for you every few hours by a
+        scheduled job, because calendar providers refuse browser requests — nothing on this page
+        could load them directly.
       </div>
 
       {data.settings.feeds.map((f) => (

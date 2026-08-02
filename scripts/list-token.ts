@@ -16,6 +16,7 @@
  * be able to do anything except rewrite a grocery list.
  */
 
+import './env.ts'
 import { createHash, randomBytes } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 

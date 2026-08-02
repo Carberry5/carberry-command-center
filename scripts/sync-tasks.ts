@@ -17,6 +17,7 @@
  * VITE_ variable, which would be compiled into the browser bundle.
  */
 
+import './env.ts'
 import { createClient } from '@supabase/supabase-js'
 import { seed } from '../src/data/seed.ts'
 import {

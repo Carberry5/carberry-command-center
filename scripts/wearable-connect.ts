@@ -23,6 +23,7 @@
  * WHOOP_CLIENT_ID / WHOOP_CLIENT_SECRET / WHOOP_REDIRECT_URI.
  */
 
+import './env.ts'
 import { createClient } from '@supabase/supabase-js'
 
 const WHOOP_AUTH_URL = 'https://api.prod.whoop.com/oauth/oauth2/auth'
