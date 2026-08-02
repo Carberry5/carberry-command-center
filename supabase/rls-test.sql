@@ -113,6 +113,49 @@ exception
 end $$;
 reset role;
 
+-- --- list_ingest_tokens is unreachable too ---------------------------------
+--
+-- ingest_list() is SECURITY DEFINER and reads this table on behalf of an
+-- unauthenticated caller, which is the whole point — but the table itself must
+-- stay invisible. A readable token hash is a brute-force target, and a readable
+-- row tells an attacker which households have an ingest token at all.
+
+insert into public.list_ingest_tokens (id, household_id, list_name, token_hash)
+values ('lit_rls', 'hh_a', 'Groceries', 'not-a-real-hash')
+on conflict (id) do nothing;
+
+set role authenticated;
+do $$
+begin
+  perform 1 from public.list_ingest_tokens;
+  raise exception 'FAIL: authenticated could read list_ingest_tokens';
+exception
+  when insufficient_privilege then raise notice 'ok: authenticated cannot read list_ingest_tokens';
+end $$;
+reset role;
+
+set role anon;
+do $$
+begin
+  perform 1 from public.list_ingest_tokens;
+  raise exception 'FAIL: anon could read list_ingest_tokens';
+exception
+  when insufficient_privilege then raise notice 'ok: anon cannot read list_ingest_tokens';
+end $$;
+
+-- But the function that reads it on their behalf is callable, and rejects a
+-- token it does not know. Without the grant the whole integration is dead; with
+-- a too-broad one, anybody could rewrite the list.
+do $$
+begin
+  perform public.ingest_list('definitely-not-a-token', array['Milk']);
+  raise exception 'FAIL: ingest_list accepted an unknown token';
+exception
+  when sqlstate '28000' then raise notice 'ok: anon may call ingest_list, and a bad token is refused';
+  when insufficient_privilege then raise exception 'FAIL: anon cannot execute ingest_list at all';
+end $$;
+reset role;
+
 -- --- anon sees nothing at all ----------------------------------------------
 
 set role anon;

@@ -87,6 +87,14 @@ export interface ListItem {
   done: boolean
   /** Member id who added it. */
   by: string
+  /**
+   * Where it came from. Absent means somebody typed it in the app; 'reminders'
+   * means it arrived from an iCloud Reminders list, and the ingest job owns it
+   * — the next post removes it if it has gone from the phone's list.
+   */
+  src?: string
+  /** Its id in the system it syncs with — a Google Tasks task id. */
+  rid?: string
 }
 
 export interface FamilyList {
