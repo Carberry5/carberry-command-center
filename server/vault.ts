@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import type {
   Chore,
   Countdown,
+  Deal,
   FamilyData,
   FamilyEvent,
   FamilyList,
@@ -15,8 +16,12 @@ import type {
   Preflight,
   Redemption,
   Reward,
+  Savings,
+  SavingsStoreId,
   SecretRef,
+  Staple,
 } from '../src/types.ts'
+import { isStoreId, storeById } from '../src/lib/savings.ts'
 import { DOW_NAMES, dowOf, parseDay, uid } from '../src/lib/dates.ts'
 import { kidConfig, preflightRows } from '../src/lib/preflight.ts'
 import { migrate } from '../src/data/migrate.ts'
@@ -49,6 +54,7 @@ const FILES = {
   events: 'Events.md',
   chores: 'Chores.md',
   meals: 'Meals.md',
+  savings: 'Savings.md',
   countdowns: 'Countdowns.md',
   secrets: 'Secrets.md',
   readme: 'README.md',
@@ -414,6 +420,111 @@ function parseMeals(src: string): { mealPlan: Record<string, string>; favorites:
 }
 
 // ---------------------------------------------------------------------------
+// Savings.md — staples, current deals, the week's plan
+// ---------------------------------------------------------------------------
+
+function renderSavings(d: FamilyData): string {
+  const sv = d.savings
+  const front = {
+    fc: 'savings',
+    status: sv.status,
+    ...(sv.plan ? { plan: { week: sv.plan.week, generatedAt: sv.plan.generatedAt } } : {}),
+  }
+
+  const staples = buildTable(
+    ['Item', 'Category', 'Note', 'ID'],
+    sv.staples.map((s) => [s.name, s.category, s.note ?? '', s.id])
+  )
+  const deals = buildTable(
+    ['Store', 'Item', 'Price', 'Savings', 'Detail', 'Ends', 'Staple', 'ID'],
+    sv.deals.map((dl) => [
+      storeById(dl.store).name,
+      dl.item,
+      dl.price,
+      dl.savings,
+      dl.detail,
+      dl.ends,
+      dl.stapleId ?? '',
+      dl.id,
+    ])
+  )
+
+  const body = [
+    '# Grocery savings',
+    '',
+    'The staples are what deals get matched against — add a row for anything the',
+    'family buys week after week. The deals table is written by the app on each',
+    'sync; edit the staples, leave the deals to the ads.',
+    '',
+    '## Staples',
+    '',
+    staples,
+    '## Deals',
+    '',
+    deals,
+    ...(sv.plan ? ['## This week\'s plan', '', sv.plan.summary, ''] : []),
+  ].join('\n')
+
+  return buildDoc(front, body)
+}
+
+const STORE_BY_NAME = new Map(
+  (['foodlion', 'giant', 'costco', 'amazon'] as SavingsStoreId[]).map((id) => [
+    storeById(id).name.toLowerCase(),
+    id,
+  ])
+)
+
+function parseSavings(src: string): Savings {
+  const { front, body } = parseDoc(src)
+
+  const status: Savings['status'] = {}
+  for (const [k, v] of Object.entries((front.status ?? {}) as Record<string, unknown>)) {
+    if (isStoreId(k)) status[k] = String(v ?? '')
+  }
+
+  const takenStaple = new Set<string>()
+  const staples: Staple[] = parseTable(section(body, 'Staples'))
+    .filter((r) => (r.item ?? '').trim())
+    .map((r) => ({
+      id: (r.id ?? '').trim() || uniqueSlug(slug(r.item), takenStaple),
+      name: r.item.trim(),
+      category: (r.category ?? '').trim() || 'Pantry',
+      ...(r.note?.trim() ? { note: r.note.trim() } : {}),
+    }))
+  staples.forEach((s) => takenStaple.add(s.id))
+
+  const stapleIds = new Set(staples.map((s) => s.id))
+  const deals: Deal[] = parseTable(section(body, 'Deals'))
+    .map((r) => {
+      const raw = (r.store ?? '').trim().toLowerCase()
+      const store = isStoreId(raw) ? raw : STORE_BY_NAME.get(raw)
+      if (!store || !(r.item ?? '').trim()) return null
+      const stapleId = (r.staple ?? '').trim()
+      return {
+        id: (r.id ?? '').trim() || uid(),
+        store,
+        item: r.item.trim(),
+        price: (r.price ?? '').trim(),
+        savings: (r.savings ?? '').trim(),
+        detail: (r.detail ?? '').trim(),
+        ends: /^\d{4}-\d{2}-\d{2}$/.test((r.ends ?? '').trim()) ? r.ends.trim() : '',
+        stapleId: stapleIds.has(stapleId) ? stapleId : null,
+      }
+    })
+    .filter((x): x is Deal => !!x)
+
+  const planFront = (front.plan ?? null) as { week?: unknown; generatedAt?: unknown } | null
+  const summary = section(body, "This week's plan").trim()
+  const plan =
+    planFront && /^\d{4}-\d{2}-\d{2}$/.test(String(planFront.week ?? ''))
+      ? { week: String(planFront.week), summary, generatedAt: Number(planFront.generatedAt ?? 0) }
+      : null
+
+  return { staples, deals, status, plan }
+}
+
+// ---------------------------------------------------------------------------
 // Countdowns.md
 // ---------------------------------------------------------------------------
 
@@ -634,6 +745,7 @@ something in the app and it lands back here.
 | \`Events.md\` | The calendar | Table rows — leave **ID** blank for new events |
 | \`Chores.md\` | Chores, reward shop, redemption history | Table rows — keep the **ID** column |
 | \`Meals.md\` | Dinner plan and family favourites | Table rows |
+| \`Savings.md\` | Grocery staples, store deals, the week's savings plan | Staples table rows; the app writes the deals |
 | \`Countdowns.md\` | Countdowns | Table rows |
 | \`Lists/\` | One note per list | Normal \`- [ ]\` checkboxes; \`#by/name\` tags who added it |
 | \`Chore Log/\` | One note per day of ticked chores and pre-flight | Checkboxes — keep the \`^id\` block refs |
@@ -671,6 +783,7 @@ export async function write(d: FamilyData): Promise<void> {
   await put(p(FILES.events), renderEvents(d))
   await put(p(FILES.chores), renderChores(d))
   await put(p(FILES.meals), renderMeals(d))
+  await put(p(FILES.savings), renderSavings(d))
   await put(p(FILES.countdowns), renderCountdowns(d))
   await put(p(FILES.secrets), renderSecrets(d))
 
@@ -707,10 +820,11 @@ export async function read(): Promise<FamilyData | null> {
   if (!fam) return null
 
   const members = fam.members
-  const [eventsSrc, choresSrc, mealsSrc, cdSrc, secretsSrc] = await Promise.all([
+  const [eventsSrc, choresSrc, mealsSrc, savingsSrc, cdSrc, secretsSrc] = await Promise.all([
     readIf(p(FILES.events)),
     readIf(p(FILES.chores)),
     readIf(p(FILES.meals)),
+    readIf(p(FILES.savings)),
     readIf(p(FILES.countdowns)),
     readIf(p(FILES.secrets)),
   ])
@@ -752,6 +866,8 @@ export async function read(): Promise<FamilyData | null> {
     lists,
     done,
     secrets: secretsSrc ? parseSecrets(secretsSrc) : [],
+    // Absent file → leave the key off so migrate() seeds the starter staples.
+    ...(savingsSrc ? { savings: parseSavings(savingsSrc) } : {}),
     feedEv: {},
   })
 }

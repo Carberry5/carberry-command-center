@@ -394,6 +394,57 @@ create index if not exists greenlight_payouts_member_idx
   on public.greenlight_payouts(household_id, member_id);
 
 -- ---------------------------------------------------------------------------
+-- Grocery savings — staples, imported store deals, the week's plan
+-- ---------------------------------------------------------------------------
+
+-- What the family buys week after week; deals are matched against these.
+create table if not exists public.staples (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  name         text not null default '',
+  category     text not null default 'Pantry',
+  note         text,
+  sort_order   integer not null default 0
+);
+
+create index if not exists staples_household_idx on public.staples(household_id);
+
+-- Current offers per store, replaced wholesale on each import. staple_id has no
+-- foreign key on purpose: deleting a staple should not take its deals with it —
+-- the client just stops treating them as matches.
+create table if not exists public.deals (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  store        text not null check (store in ('foodlion', 'giant', 'costco', 'amazon')),
+  item         text not null default '',
+  price        text not null default '',
+  savings      text not null default '',
+  detail       text not null default '',
+  -- "YYYY-MM-DD" or '' when the ad doesn't say — text, because '' is not a date.
+  ends         text not null default '',
+  staple_id    text,
+  sort_order   integer not null default 0
+);
+
+create index if not exists deals_household_store_idx on public.deals(household_id, store);
+
+-- "14 deals · synced Aug 3", one line per store.
+create table if not exists public.savings_status (
+  household_id text not null references public.households(id) on delete cascade,
+  store        text not null check (store in ('foodlion', 'giant', 'costco', 'amazon')),
+  status       text not null default '',
+  primary key (household_id, store)
+);
+
+-- The Claude-written weekly strategy; one row per household, replaced on rebuild.
+create table if not exists public.savings_plan (
+  household_id text primary key references public.households(id) on delete cascade,
+  week         text not null default '',
+  summary      text not null default '',
+  generated_at bigint not null default 0
+);
+
+-- ---------------------------------------------------------------------------
 -- Integration credentials — service_role only, never the browser
 -- ---------------------------------------------------------------------------
 
@@ -634,6 +685,37 @@ alter table public.rewards add column if not exists title text default ''::text;
 alter table public.rewards add column if not exists cost integer default 0;
 alter table public.rewards add column if not exists sort_order integer default 0;
 
+-- staples
+alter table public.staples add column if not exists id text;
+alter table public.staples add column if not exists household_id text;
+alter table public.staples add column if not exists name text default ''::text;
+alter table public.staples add column if not exists category text default 'Pantry'::text;
+alter table public.staples add column if not exists note text;
+alter table public.staples add column if not exists sort_order integer default 0;
+
+-- deals
+alter table public.deals add column if not exists id text;
+alter table public.deals add column if not exists household_id text;
+alter table public.deals add column if not exists store text;
+alter table public.deals add column if not exists item text default ''::text;
+alter table public.deals add column if not exists price text default ''::text;
+alter table public.deals add column if not exists savings text default ''::text;
+alter table public.deals add column if not exists detail text default ''::text;
+alter table public.deals add column if not exists ends text default ''::text;
+alter table public.deals add column if not exists staple_id text;
+alter table public.deals add column if not exists sort_order integer default 0;
+
+-- savings_status
+alter table public.savings_status add column if not exists household_id text;
+alter table public.savings_status add column if not exists store text;
+alter table public.savings_status add column if not exists status text default ''::text;
+
+-- savings_plan
+alter table public.savings_plan add column if not exists household_id text;
+alter table public.savings_plan add column if not exists week text default ''::text;
+alter table public.savings_plan add column if not exists summary text default ''::text;
+alter table public.savings_plan add column if not exists generated_at bigint default 0;
+
 -- secrets
 alter table public.secrets add column if not exists id text;
 alter table public.secrets add column if not exists household_id text;
@@ -840,7 +922,8 @@ declare
     'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members', 'chore_log',
     'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists', 'list_items',
     'countdowns', 'feeds', 'secrets', 'preflight_kids', 'preflight_bring',
-    'fit_stats', 'greenlight', 'greenlight_payouts'
+    'fit_stats', 'greenlight', 'greenlight_payouts',
+    'staples', 'deals', 'savings_status', 'savings_plan'
   ];
 begin
   foreach t in array scoped loop
@@ -917,7 +1000,8 @@ declare
     'households', 'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members',
     'chore_log', 'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists',
     'list_items', 'countdowns', 'feeds', 'feed_events', 'secrets', 'preflight_kids',
-    'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts'
+    'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts',
+    'staples', 'deals', 'savings_status', 'savings_plan'
   ];
 begin
   -- The `realtime` schema is the reliable "am I on Supabase?" tell; a plain

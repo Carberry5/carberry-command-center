@@ -19,6 +19,7 @@ import { MemberPage } from './pages/Member.tsx'
 import { CalendarPage } from './pages/Calendar.tsx'
 import { ChoresPage } from './pages/Chores.tsx'
 import { MealsPage } from './pages/Meals.tsx'
+import { SavingsPage } from './pages/Savings.tsx'
 import { ListsPage } from './pages/Lists.tsx'
 import { CountdownsPage } from './pages/Countdowns.tsx'
 import { SidekickPage } from './pages/Sidekick.tsx'
@@ -30,6 +31,7 @@ const PAGES = {
   calendar: CalendarPage,
   chores: ChoresPage,
   meals: MealsPage,
+  savings: SavingsPage,
   lists: ListsPage,
   countdowns: CountdownsPage,
   sidekick: SidekickPage,

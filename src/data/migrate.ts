@@ -60,5 +60,16 @@ export function migrate(input: Partial<FamilyData> | null | undefined): FamilyDa
   d.fit = { ...base.fit, ...(input.fit ?? {}) }
   d.gl = { ...base.gl, ...(input.gl ?? {}) }
 
+  // Data written before the savings module gets the seed staples and an empty
+  // deal book; data that has any savings shape keeps exactly what it has.
+  d.savings = input.savings
+    ? {
+        staples: input.savings.staples ?? [],
+        deals: input.savings.deals ?? [],
+        status: input.savings.status ?? {},
+        plan: input.savings.plan ?? null,
+      }
+    : base.savings
+
   return d
 }

@@ -47,6 +47,7 @@ function emptyHousehold(): FamilyData {
     settings: { pin: '1234', zip: '', lat: 0, lon: 0, place: '', feeds: [] },
     feedEv: {}, preflight: { open: true, depart: '07:30', kids: {} },
     fit: {}, gl: {}, secrets: [],
+    savings: { staples: [], deals: [], status: {}, plan: null },
   }
 }
 

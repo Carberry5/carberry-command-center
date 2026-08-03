@@ -1,6 +1,7 @@
 import { createClient, type RealtimeChannel, type SupabaseClient } from '@supabase/supabase-js'
 import type {
   Countdown,
+  Deal,
   FamilyData,
   FamilyEvent,
   FamilyList,
@@ -11,8 +12,11 @@ import type {
   Member,
   Preflight,
   Reward,
+  Savings,
   SecretRef,
+  Staple,
 } from '../types.ts'
+import { isStoreId } from '../lib/savings.ts'
 
 /**
  * Supabase replacement for the vault sidecar.
@@ -65,6 +69,10 @@ export interface TableRows {
   fit_stats: Row[]
   greenlight: Row[]
   greenlight_payouts: Row[]
+  staples: Row[]
+  deals: Row[]
+  savings_status: Row[]
+  savings_plan: Row[]
 }
 
 export type TableName = keyof TableRows
@@ -99,6 +107,10 @@ export const PRIMARY_KEYS: Record<TableName, string[]> = {
   fit_stats: ['household_id', 'member_id'],
   greenlight: ['household_id', 'member_id'],
   greenlight_payouts: ['id'],
+  staples: ['id'],
+  deals: ['id'],
+  savings_status: ['household_id', 'store'],
+  savings_plan: ['household_id'],
 }
 
 /**
@@ -128,6 +140,10 @@ export const WRITE_ORDER: TableName[] = [
   'fit_stats',
   'greenlight',
   'greenlight_payouts',
+  'staples',
+  'deals',
+  'savings_status',
+  'savings_plan',
 ]
 
 function emptyRows(): TableRows {
@@ -137,6 +153,7 @@ function emptyRows(): TableRows {
     meal_plan: [], lists: [], list_items: [], countdowns: [], feeds: [],
     secrets: [], preflight_kids: [], preflight_bring: [], fit_stats: [],
     greenlight: [], greenlight_payouts: [],
+    staples: [], deals: [], savings_status: [], savings_plan: [],
   }
 }
 
@@ -317,6 +334,34 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
       })
     })
   })
+
+  data.savings.staples.forEach((s, i) => {
+    rows.staples.push({
+      id: s.id, household_id: hh, name: s.name, category: s.category,
+      note: s.note ?? null, sort_order: i,
+    })
+  })
+
+  data.savings.deals.forEach((d, i) => {
+    rows.deals.push({
+      id: d.id, household_id: hh, store: d.store, item: d.item, price: d.price,
+      savings: d.savings, detail: d.detail, ends: d.ends,
+      staple_id: d.stapleId, sort_order: i,
+    })
+  })
+
+  Object.entries(data.savings.status).forEach(([store, status]) => {
+    if (status !== undefined) rows.savings_status.push({ household_id: hh, store, status })
+  })
+
+  if (data.savings.plan) {
+    rows.savings_plan.push({
+      household_id: hh,
+      week: data.savings.plan.week,
+      summary: data.savings.plan.summary,
+      generated_at: data.savings.plan.generatedAt,
+    })
+  }
 
   return rows
 }
@@ -543,6 +588,42 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     }
   })
 
+  const staples: Staple[] = [...rows.staples].sort(bySort).map((r) => ({
+    id: str(r.id),
+    name: str(r.name),
+    category: str(r.category, 'Pantry'),
+    ...(r.note == null ? {} : { note: str(r.note) }),
+  }))
+
+  const deals: Deal[] = [...rows.deals]
+    .sort(bySort)
+    .filter((r) => isStoreId(r.store))
+    .map((r) => ({
+      id: str(r.id),
+      store: r.store as Deal['store'],
+      item: str(r.item),
+      price: str(r.price),
+      savings: str(r.savings),
+      detail: str(r.detail),
+      ends: str(r.ends),
+      stapleId: r.staple_id == null ? null : str(r.staple_id),
+    }))
+
+  const savingsStatus: Savings['status'] = {}
+  rows.savings_status.forEach((r) => {
+    if (isStoreId(r.store)) savingsStatus[r.store] = str(r.status)
+  })
+
+  const planRow = rows.savings_plan[0]
+  const savings: Savings = {
+    staples,
+    deals,
+    status: savingsStatus,
+    plan: planRow
+      ? { week: day(planRow.week), summary: str(planRow.summary), generatedAt: num(planRow.generated_at) }
+      : null,
+  }
+
   return {
     members,
     events,
@@ -567,6 +648,7 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     fit,
     gl,
     secrets,
+    savings,
   }
 }
 

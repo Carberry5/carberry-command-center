@@ -231,6 +231,38 @@ export function seed(): FamilyData {
       },
     },
     secrets: [],
+    savings: {
+      // What the family buys every week — deals are matched against this list.
+      staples: [
+        { id: 'st-milk', name: 'Milk', category: 'Dairy' },
+        { id: 'st-eggs', name: 'Eggs', category: 'Dairy' },
+        { id: 'st-string-cheese', name: 'String cheese', category: 'Dairy' },
+        { id: 'st-yogurt', name: 'Yogurt', category: 'Dairy' },
+        { id: 'st-butter', name: 'Butter', category: 'Dairy' },
+        { id: 'st-strawberries', name: 'Strawberries', category: 'Produce' },
+        { id: 'st-bananas', name: 'Bananas', category: 'Produce' },
+        { id: 'st-apples', name: 'Apples', category: 'Produce' },
+        { id: 'st-broccoli', name: 'Broccoli', category: 'Produce' },
+        { id: 'st-chicken-thighs', name: 'Chicken thighs', category: 'Meat' },
+        { id: 'st-chicken-breast', name: 'Chicken breast', category: 'Meat' },
+        { id: 'st-ground-beef', name: 'Ground beef', category: 'Meat' },
+        { id: 'st-steak', name: 'Steak', category: 'Meat', note: 'Weekend dinners' },
+        { id: 'st-salmon', name: 'Salmon', category: 'Meat' },
+        { id: 'st-bread', name: 'Sandwich bread', category: 'Pantry' },
+        { id: 'st-tortillas', name: 'Tortillas', category: 'Pantry', note: 'Taco night' },
+        { id: 'st-goldfish', name: 'Goldfish crackers', category: 'Snacks' },
+        { id: 'st-granola-bars', name: 'Granola bars', category: 'Snacks' },
+        { id: 'st-coffee', name: 'Coffee', category: 'Pantry' },
+        { id: 'st-cereal', name: 'Cereal', category: 'Pantry' },
+        { id: 'st-pasta', name: 'Pasta', category: 'Pantry' },
+        { id: 'st-paper-towels', name: 'Paper towels', category: 'Household' },
+        { id: 'st-laundry', name: 'Laundry detergent', category: 'Household' },
+        { id: 'st-dog-food', name: 'Dog food', category: 'Household' },
+      ],
+      deals: [],
+      status: {},
+      plan: null,
+    },
   }
 
   return data

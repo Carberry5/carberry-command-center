@@ -271,6 +271,21 @@ export function mergeSeed(live: FamilyData, fresh: FamilyData, mode: Mode): Merg
     notes.push('  + location (was blank)')
   }
 
+  // --- savings staples ------------------------------------------------------
+  // Staples are reference data like chores, so they seed. Deals, per-store
+  // status and the weekly plan are live shopping state and never do.
+  const liveStaples = new Set(merged.savings.staples.map((s) => norm(s.name)))
+  const stapleIds = new Set(merged.savings.staples.map((s) => s.id))
+  let staplesAdded = 0
+  for (const ss of fresh.savings.staples) {
+    if (liveStaples.has(norm(ss.name))) continue
+    const id = stapleIds.has(ss.id) ? uid() : ss.id
+    stapleIds.add(id)
+    merged.savings.staples.push({ ...ss, id })
+    staplesAdded++
+  }
+  add('staple(s)', staplesAdded)
+
   // --- preflight ----------------------------------------------------------
   let preflightAdded = 0
   for (const [seedMemberId, cfg] of Object.entries(fresh.preflight.kids ?? {})) {
