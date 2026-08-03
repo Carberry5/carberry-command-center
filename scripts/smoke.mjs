@@ -49,6 +49,7 @@ for (const [label, expect] of [
   ['Calendar', 'Everyone'],
   ['Chores', 'Reward shop'],
   ['Meals', 'Family favorites'],
+  ['Savings', 'Things we regularly buy'],
   ['Lists', 'Groceries'],
   ['Countdowns', 'DAYS TO GO'],
   ['Sidekick', 'Paste a school email'],

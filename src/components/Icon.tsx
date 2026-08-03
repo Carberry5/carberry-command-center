@@ -97,6 +97,7 @@ export const NAV_ICONS: Record<string, string> = {
   calendar: 'M4 6.5h16v13.5H4zM8 4v4M16 4v4M4 11h16',
   chores: 'M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z',
   meals: 'M7 4v6M4.5 4v3.5a2.5 2.5 0 0 0 5 0V4M7 10v10M16.5 4c-2 1.2-3 3.2-3 5.5 0 2 1.2 3.5 3 3.5V20M16.5 4V20',
+  savings: 'M20 12.5 12.8 19.7a2 2 0 0 1-2.8 0L4.3 14a2 2 0 0 1 0-2.8L11.5 4H17a3 3 0 0 1 3 3v5.5zM15.5 8.5h.02',
   lists: 'M9.5 6.5h11M9.5 12h11M9.5 17.5h11M4 6.5l1.2 1.2 2.2-2.4M4 12l1.2 1.2 2.2-2.4M4 17.5l1.2 1.2 2.2-2.4',
   countdowns: 'M7 3.5h10v3.5l-4 5 4 5v3.5H7v-3.5l4-5-4-5z',
   sidekick: PATHS.sparkle,

@@ -186,6 +186,52 @@ export interface Greenlight {
   pay: GreenlightPayout[]
 }
 
+/** The stores whose weekly ads and deals the savings module tracks. */
+export type SavingsStoreId = 'foodlion' | 'giant' | 'costco' | 'amazon'
+
+/** Something the family buys week after week — what deals are matched against. */
+export interface Staple {
+  id: string
+  name: string
+  /** Produce, Dairy, Pantry, Household… free text, used for grouping. */
+  category: string
+  /** "the 2% kind", "Kirkland only" — anything worth remembering at the shelf. */
+  note?: string
+}
+
+/** One current offer at one store, extracted from its ad page. */
+export interface Deal {
+  id: string
+  store: SavingsStoreId
+  item: string
+  /** Display price: "$2.99/lb", "2 for $6", "BOGO". */
+  price: string
+  /** Display savings: "Save $1.50", "30% off", or "" when the ad doesn't say. */
+  savings: string
+  /** Conditions worth knowing: "limit 2", "with card", "Deal Lock". */
+  detail: string
+  /** "YYYY-MM-DD" the deal ends, or "" when the ad doesn't say. */
+  ends: string
+  /** The staple this deal covers, or null when it matches nothing we buy. */
+  stapleId: string | null
+}
+
+/** The Claude-written shopping strategy for the week, kept for the TV/iPad. */
+export interface SavingsPlan {
+  /** "YYYY-MM-DD" of the day it was generated. */
+  week: string
+  summary: string
+  generatedAt: number
+}
+
+export interface Savings {
+  staples: Staple[]
+  deals: Deal[]
+  /** Status line per store: "14 deals · synced Aug 3". */
+  status: Partial<Record<SavingsStoreId, string>>
+  plan: SavingsPlan | null
+}
+
 /** A secret the app displays but never stores — resolved from 1Password on demand. */
 export interface SecretRef {
   id: string
@@ -216,6 +262,8 @@ export interface FamilyData {
   /** Greenlight cards keyed by kid id. */
   gl: Record<string, Greenlight>
   secrets: SecretRef[]
+  /** The grocery savings module: staples, current deals, and the weekly plan. */
+  savings: Savings
 }
 
 export type PageId =
@@ -224,6 +272,7 @@ export type PageId =
   | 'calendar'
   | 'chores'
   | 'meals'
+  | 'savings'
   | 'lists'
   | 'countdowns'
   | 'sidekick'

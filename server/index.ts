@@ -11,6 +11,9 @@ import { config, vaultDir } from './config.ts'
 import * as vault from './vault.ts'
 import * as op from './onepassword.ts'
 import * as sidekick from './sidekick.ts'
+import * as savings from './savings.ts'
+import { isStoreId } from '../src/lib/savings.ts'
+import type { Deal, Staple } from '../src/types.ts'
 
 /**
  * The vault sidecar.
@@ -266,6 +269,46 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
 
   if (path === '/api/sidekick/status' && req.method === 'GET') {
     return send(res, 200, await sidekick.ready())
+  }
+
+  // Savings: pull deals out of a store's ad page. Stateless on purpose — the
+  // client sends its staples and commits the result through its own store, so
+  // this works the same against the vault and against Supabase.
+  if (path === '/api/savings/import' && req.method === 'POST') {
+    try {
+      const body = await readJson<{ store: string; text?: string; staples?: Staple[] }>(req)
+      if (!isStoreId(body.store)) return send(res, 400, { error: 'Unknown store' })
+      const text = body.text?.trim() || (await savings.fetchStoreText(body.store))
+      const deals = await savings.extractDeals(body.store, text, body.staples ?? [])
+      return send(res, 200, { deals })
+    } catch (err) {
+      return send(res, 502, { error: err instanceof Error ? err.message : 'Import failed' })
+    }
+  }
+
+  // Savings: write the week's shopping strategy from deals + dinners + list.
+  if (path === '/api/savings/plan' && req.method === 'POST') {
+    try {
+      const body = await readJson<{
+        staples?: Staple[]
+        deals?: Deal[]
+        dinners?: { date: string; meal: string }[]
+        groceries?: string[]
+      }>(req)
+      const plan = await savings.buildPlan({
+        staples: body.staples ?? [],
+        deals: body.deals ?? [],
+        dinners: body.dinners ?? [],
+        groceries: body.groceries ?? [],
+      })
+      return send(res, 200, plan)
+    } catch (err) {
+      return send(res, 502, { error: err instanceof Error ? err.message : 'Planning failed' })
+    }
+  }
+
+  if (path === '/api/savings/status' && req.method === 'GET') {
+    return send(res, 200, await savings.ready())
   }
 
   if (config.serveStatic && req.method === 'GET' && (await serveStatic(path, res))) return

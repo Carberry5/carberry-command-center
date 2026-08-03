@@ -1,7 +1,8 @@
 # Carberry Command Center
 
 A family dashboard for the iPad, the TV, and the desktop — shared calendar, chore
-stars, meal plan, lists, countdowns, morning pre-flight, and per-kid pages.
+stars, meal plan, grocery savings, lists, countdowns, morning pre-flight, and
+per-kid pages.
 
 Built from the Claude Design prototype in [`project/`](project/) (the design
 conversation is in [`chats/`](chats/); the original handoff note is
@@ -55,6 +56,7 @@ Everything the app owns lives in one folder (`Family Council/` by default):
 | `Events.md` | The calendar | Table rows. Add a row and leave **ID** blank; the app fills it in |
 | `Chores.md` | Chores, reward shop, redemption history | Table rows. `Days` takes `daily`, `weekdays`, or `Mon Wed Fri` |
 | `Meals.md` | Dinner plan and favourites | Table rows |
+| `Savings.md` | Grocery staples, store deals, the week's savings plan | Staples table rows; the app writes the deals (see [docs/grocery-savings.md](docs/grocery-savings.md)) |
 | `Countdowns.md` | Countdowns | Table rows |
 | `Lists/*.md` | One note per list | Ordinary `- [ ]` checkboxes; a `#by/name` tag records who added it |
 | `Chore Log/*.md` | One note per day of ticked chores and pre-flight | Checkboxes — keep the `^id` block refs |
