@@ -10,7 +10,7 @@ const PAGES: [PageId, string][] = [
   ['calendar', 'Calendar'],
   ['chores', 'Chores'],
   ['meals', 'Meals'],
-  ['savings', 'Savings'],
+  ['savings', 'Grocery'],
   ['lists', 'Lists'],
   ['countdowns', 'Countdowns'],
   ['sidekick', 'Sidekick'],

@@ -147,9 +147,13 @@ export function handleCommand(raw: string, host: VoiceHost, ui: VoiceUi) {
   }
 
   // "Go to the calendar"
-  m = t.match(/(?:go to|show|open) (?:the )?(today|home|calendar|chores|meals|savings|deals|lists|countdowns|sidekick|settings)/)
+  m = t.match(/(?:go to|show|open) (?:the )?(today|home|calendar|chores|meals|grocery|groceries|savings|deals|lists|countdowns|sidekick|settings)/)
   if (m) {
-    const page = (m[1] === 'home' ? 'today' : m[1] === 'deals' ? 'savings' : m[1]) as PageId
+    const page = (m[1] === 'home'
+      ? 'today'
+      : ['grocery', 'groceries', 'deals'].includes(m[1])
+        ? 'savings'
+        : m[1]) as PageId
     ui.setVoice(null)
     host.go(page)
     return
