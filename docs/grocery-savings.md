@@ -119,3 +119,21 @@ store+item+price), so devices see no phantom changes. Revoke a token any time
 with `deals-token.ts revoke`. Subscribe to Food Lion's and Giant's weekly-ad
 emails on their sites — until those arrive, only stores with deal emails get
 imported this way.
+
+### The weekly plan without API credits
+
+The in-app Build-the-plan button bills the household's Anthropic API key. The
+same plan can instead be built by a Claude session (covered by a claude.ai
+subscription) through the token:
+
+- `savings_context` returns everything a planner needs — staples, current
+  deals, the next two weeks of the dinner plan, favourite meals, open grocery
+  items, and the last plan. Grocery-scoped on purpose: what the family eats is
+  the token's whole world; names, calendar and secrets are not in it.
+- `POST /rest/v1/rpc/ingest_plan` `{"p_token": …, "p_summary": …,
+  "p_dinners": [{date, meal}, …], "p_groceries": ["…"]}` writes the plan card,
+  and — only for entries actually passed — dinner nights onto the meal plan
+  (next three weeks only) and items onto the Groceries list, deduplicated
+  case-insensitively. The scheduled refresh passes empty arrays: an automation
+  may describe the week, but changing what the family eats is always a person
+  approving it in the conversation first.

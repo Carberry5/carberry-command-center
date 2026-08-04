@@ -169,6 +169,91 @@ begin
     raise notice '  ok: an oversized payload is rejected';
   end;
 
+  -- --- the widened context carries what a planner needs --------------------
+  insert into public.favorites (id, household_id, name, sort_order)
+  values ('fav1', hh, 'Taco night', 0);
+  insert into public.meal_plan (household_id, day, meal)
+  values (hh, current_date + 1, 'Pizza');
+  insert into public.lists (id, household_id, name) values ('l_groc', hh, 'Groceries');
+  insert into public.list_items (id, list_id, household_id, text, done)
+  values ('i1', 'l_groc', hh, 'Milk', false),
+         ('i2', 'l_groc', hh, 'Bought thing', true);
+
+  res := public.savings_context(tok);
+  if json_array_length(res->'deals') < 1 then raise exception 'FAIL: context has no deals'; end if;
+  if json_array_length(res->'favorites') <> 1 then raise exception 'FAIL: context favourites wrong'; end if;
+  if json_array_length(res->'mealPlan') <> 1 then raise exception 'FAIL: context meal plan wrong'; end if;
+  if json_array_length(res->'groceries') <> 1 then
+    raise exception 'FAIL: context should list only unchecked groceries';
+  end if;
+  checks := checks + 1;
+  raise notice '  ok: context returns deals, favourites, meal plan and open groceries';
+
+  -- --- ingest_plan: summary only -------------------------------------------
+  begin
+    res := public.ingest_plan('not-the-token', 'a plan');
+    raise exception 'FAIL: a bad token wrote a plan';
+  exception when sqlstate '28000' then
+    checks := checks + 1;
+    raise notice '  ok: ingest_plan rejects a bad token';
+  end;
+
+  begin
+    res := public.ingest_plan(tok, '   ');
+    raise exception 'FAIL: a blank summary was accepted';
+  exception when sqlstate '22023' then
+    checks := checks + 1;
+    raise notice '  ok: a blank summary is rejected';
+  end;
+
+  res := public.ingest_plan(tok, 'Lead with Costco this week.');
+  select count(*) into n from public.savings_plan where household_id = hh;
+  if n <> 1 then raise exception 'FAIL: no plan row written'; end if;
+  if (res->>'dinners')::int <> 0 or (res->>'groceries')::int <> 0 then
+    raise exception 'FAIL: a summary-only call should change nothing else';
+  end if;
+  select count(*) into n from public.meal_plan where household_id = hh;
+  if n <> 1 then raise exception 'FAIL: summary-only call touched the meal plan'; end if;
+  checks := checks + 1;
+  raise notice '  ok: summary-only writes the plan card and nothing else';
+
+  -- --- ingest_plan: approved dinners and groceries -------------------------
+  res := public.ingest_plan(tok, 'Updated plan.',
+    jsonb_build_array(
+      jsonb_build_object('date', to_char(current_date + 2, 'YYYY-MM-DD'), 'meal', 'Steak night'),
+      jsonb_build_object('date', to_char(current_date + 1, 'YYYY-MM-DD'), 'meal', 'Tacos'),
+      jsonb_build_object('date', '1999-01-01', 'meal', 'Time travel'),
+      jsonb_build_object('date', to_char(current_date + 3, 'YYYY-MM-DD'), 'meal', '')
+    ),
+    '["Strip loin", "milk", "  "]'::jsonb);
+
+  if (res->>'dinners')::int <> 2 then
+    raise exception 'FAIL: expected 2 dinners applied (past + blank dropped), got %', res->>'dinners';
+  end if;
+  select meal into ids from public.meal_plan where household_id = hh and day = current_date + 1;
+  if ids <> 'Tacos' then raise exception 'FAIL: an approved swap did not overwrite'; end if;
+  checks := checks + 1;
+  raise notice '  ok: approved dinners land, replacing the night they name';
+
+  -- "milk" already on the list (case-insensitively), so only Strip loin adds.
+  if (res->>'groceries')::int <> 1 then
+    raise exception 'FAIL: expected 1 grocery added, got %', res->>'groceries';
+  end if;
+  select count(*) into n from public.list_items where list_id = 'l_groc';
+  if n <> 3 then raise exception 'FAIL: expected 3 items on the list, got %', n; end if;
+  checks := checks + 1;
+  raise notice '  ok: approved groceries append, deduplicated against the list';
+
+  -- Re-applying the same approval changes nothing.
+  res := public.ingest_plan(tok, 'Updated plan.',
+    jsonb_build_array(jsonb_build_object('date', to_char(current_date + 2, 'YYYY-MM-DD'), 'meal', 'Steak night')),
+    '["Strip loin"]'::jsonb);
+  if (res->>'groceries')::int <> 0 then raise exception 'FAIL: a re-post re-added groceries'; end if;
+  select count(*) into n from public.list_items where list_id = 'l_groc';
+  if n <> 3 then raise exception 'FAIL: a re-post grew the list'; end if;
+  checks := checks + 1;
+  raise notice '  ok: re-applying an approval is a no-op';
+
   -- --- cleanup -------------------------------------------------------------
   delete from public.households where id = hh;
   raise notice 'ALL % DEALS INGEST CHECKS PASSED', checks;

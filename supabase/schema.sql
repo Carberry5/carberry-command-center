@@ -941,9 +941,11 @@ create index if not exists deals_ingest_tokens_household_idx
   on public.deals_ingest_tokens(household_id);
 
 /**
- * What the extractor needs before it can match deals: the household's staples.
- * Read-only, token-gated, and deliberately nothing else — no names, no
- * calendar, no lists.
+ * Everything a session-side planner needs, read-only and token-gated: the
+ * staples deals are matched against, the current deals, the next two weeks of
+ * the dinner plan, the favourite meals, the open grocery items, and the last
+ * written plan. Deliberately grocery-scoped and nothing else — no names, no
+ * calendar, no secrets. That is the token's whole world: what the family eats.
  */
 create or replace function public.savings_context(p_token text)
 returns json
@@ -969,8 +971,155 @@ begin
              order by s.sort_order)
         from public.staples s
        where s.household_id = tok.household_id
-    ), '[]'::json)
+    ), '[]'::json),
+    'deals', coalesce((
+      select json_agg(json_build_object(
+               'store', d.store, 'item', d.item, 'price', d.price, 'savings', d.savings,
+               'detail', d.detail, 'ends', d.ends, 'stapleId', d.staple_id)
+             order by d.store, d.sort_order)
+        from public.deals d
+       where d.household_id = tok.household_id
+    ), '[]'::json),
+    'mealPlan', coalesce((
+      select json_agg(json_build_object('date', to_char(m.day, 'YYYY-MM-DD'), 'meal', m.meal)
+             order by m.day)
+        from public.meal_plan m
+       where m.household_id = tok.household_id
+         and m.day between current_date and current_date + 13
+    ), '[]'::json),
+    'favorites', coalesce((
+      select json_agg(f.name order by f.sort_order)
+        from public.favorites f
+       where f.household_id = tok.household_id
+    ), '[]'::json),
+    'groceries', coalesce((
+      select json_agg(li.text order by li.sort_order)
+        from public.list_items li
+        join public.lists l on l.id = li.list_id
+       where l.household_id = tok.household_id
+         and lower(l.name) = 'groceries'
+         and not li.done
+    ), '[]'::json),
+    'plan', (
+      select json_build_object('week', p.week, 'summary', p.summary, 'generatedAt', p.generated_at)
+        from public.savings_plan p
+       where p.household_id = tok.household_id
+    )
   );
+end
+$$;
+
+/**
+ * Writes the weekly plan a session built: always the summary card, and — only
+ * when the family has approved them in that conversation — dinner nights onto
+ * the meal plan and items onto the grocery list. The scheduled refresh passes
+ * empty arrays: an automation may describe the week, but changing what the
+ * family eats is always a person saying yes.
+ */
+create or replace function public.ingest_plan(
+  p_token text,
+  p_summary text,
+  p_dinners jsonb default '[]',
+  p_groceries jsonb default '[]'
+)
+returns json
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  tok        public.deals_ingest_tokens%rowtype;
+  v_list_id  text;
+  v_dinners  int := 0;
+  v_items    int := 0;
+begin
+  if p_summary is null or btrim(p_summary) = '' then
+    raise exception 'summary is required' using errcode = '22023';
+  end if;
+  if length(p_summary) > 20000 then
+    raise exception 'summary too long' using errcode = '22023';
+  end if;
+  if jsonb_typeof(coalesce(p_dinners, 'null'::jsonb)) <> 'array'
+     or jsonb_typeof(coalesce(p_groceries, 'null'::jsonb)) <> 'array' then
+    raise exception 'dinners and groceries must be json arrays' using errcode = '22023';
+  end if;
+  if jsonb_array_length(p_dinners) > 21 or jsonb_array_length(p_groceries) > 100 then
+    raise exception 'too many dinners or groceries' using errcode = '22023';
+  end if;
+
+  select * into tok
+    from public.deals_ingest_tokens
+   where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+  if not found then
+    raise exception 'invalid ingest token' using errcode = '28000';
+  end if;
+
+  insert into public.savings_plan (household_id, week, summary, generated_at)
+  values (tok.household_id, to_char(current_date, 'YYYY-MM-DD'), p_summary,
+          (extract(epoch from now()) * 1000)::bigint)
+  on conflict (household_id)
+  do update set week = excluded.week, summary = excluded.summary,
+                generated_at = excluded.generated_at;
+
+  -- Approved dinner nights. Only dates in the next three weeks are accepted —
+  -- a planner has no business rewriting history or next season.
+  with wanted as (
+    select d.value->>'date' as day, btrim(coalesce(d.value->>'meal', '')) as meal
+      from jsonb_array_elements(p_dinners) d
+     where coalesce(d.value->>'date', '') ~ '^\d{4}-\d{2}-\d{2}$'
+       and btrim(coalesce(d.value->>'meal', '')) <> ''
+       and (d.value->>'date')::date between current_date and current_date + 21
+  ),
+  applied as (
+    insert into public.meal_plan (household_id, day, meal)
+    select tok.household_id, w.day::date, w.meal from wanted w
+        on conflict (household_id, day) do update set meal = excluded.meal
+    returning 1
+  )
+  select count(*) into v_dinners from applied;
+
+  -- Approved grocery items, appended to the Groceries list (created if the
+  -- household somehow has none), deduplicated case-insensitively against
+  -- everything already there — same manners as the Reminders ingest.
+  if jsonb_array_length(p_groceries) > 0 then
+    select id into v_list_id
+      from public.lists
+     where household_id = tok.household_id and lower(name) = 'groceries'
+     order by sort_order
+     limit 1;
+
+    if v_list_id is null then
+      v_list_id := 'plan:' || tok.id;
+      insert into public.lists (id, household_id, name, sort_order)
+      values (v_list_id, tok.household_id, 'Groceries',
+              coalesce((select max(sort_order) + 1 from public.lists
+                         where household_id = tok.household_id), 0));
+    end if;
+
+    with cleaned as (
+      select (array_agg(btrim(g.value) order by g.ord))[1] as txt, min(g.ord) as ord
+        from jsonb_array_elements_text(p_groceries) with ordinality as g(value, ord)
+       where btrim(g.value) <> ''
+       group by lower(btrim(g.value))
+    ),
+    added as (
+      insert into public.list_items (id, list_id, household_id, text, done, sort_order)
+      select 'plan:' || md5(v_list_id || '|' || lower(c.txt)),
+             v_list_id, tok.household_id, c.txt, false, 2000 + c.ord
+        from cleaned c
+       where not exists (
+         select 1 from public.list_items li
+          where li.list_id = v_list_id and lower(li.text) = lower(c.txt)
+       )
+      on conflict (id) do nothing
+      returning 1
+    )
+    select count(*) into v_items from added;
+  end if;
+
+  update public.deals_ingest_tokens set last_used_at = now() where id = tok.id;
+
+  return json_build_object('dinners', v_dinners, 'groceries', v_items);
 end
 $$;
 
@@ -1064,8 +1213,10 @@ $$;
 
 revoke all on function public.savings_context(text) from public;
 revoke all on function public.ingest_deals(text, text, jsonb, text) from public;
+revoke all on function public.ingest_plan(text, text, jsonb, jsonb) from public;
 grant execute on function public.savings_context(text) to anon, authenticated;
 grant execute on function public.ingest_deals(text, text, jsonb, text) to anon, authenticated;
+grant execute on function public.ingest_plan(text, text, jsonb, jsonb) to anon, authenticated;
 
 -- The token table itself is unreachable from any browser role, exactly like
 -- list_ingest_tokens: RLS on with no policy, and no grants.
