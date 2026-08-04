@@ -59,6 +59,7 @@ Deno.serve(async (req: Request) => {
       staples?: StapleIn[]
       deals?: DealIn[]
       dinners?: { date: string; meal: string }[]
+      favorites?: string[]
       groceries?: string[]
     }
 
@@ -74,6 +75,7 @@ Deno.serve(async (req: Request) => {
         staples: body.staples ?? [],
         deals: body.deals ?? [],
         dinners: body.dinners ?? [],
+        favorites: body.favorites ?? [],
         groceries: body.groceries ?? [],
       }
       return json(200, await buildPlan(apiKey, input))

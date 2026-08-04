@@ -293,12 +293,14 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
         staples?: Staple[]
         deals?: Deal[]
         dinners?: { date: string; meal: string }[]
+        favorites?: string[]
         groceries?: string[]
       }>(req)
       const plan = await savings.buildPlan({
         staples: body.staples ?? [],
         deals: body.deals ?? [],
         dinners: body.dinners ?? [],
+        favorites: body.favorites ?? [],
         groceries: body.groceries ?? [],
       })
       return send(res, 200, plan)
