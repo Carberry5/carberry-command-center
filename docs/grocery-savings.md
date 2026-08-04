@@ -83,3 +83,39 @@ in, redeploy with `--no-verify-jwt` and rely on the key staying server-side.
 
 With no key configured anywhere, the page still manages staples and shows
 saved deals; Sync / Extract / Build explain what's missing.
+
+## Deals from Gmail — when the store sites block the fetch
+
+The grocery sites bot-block server-side fetches (Giant answers 403), but their
+deal emails — "Your Weekly Warehouse Insider!", weekly-ad newsletters,
+Subscribe & Save notices — land in Gmail. The deals ingest turns those into
+Savings-page deals automatically.
+
+The trust model mirrors the iCloud Reminders list ingest: the caller presents
+a minted token, only its SHA-256 is stored, and the token can do exactly two
+things — read the household's staples (`savings_context`) and rewrite its
+deals (`ingest_deals`). No Google OAuth scopes change: the repo deliberately
+carries only the Tasks scope, and Gmail is read by whatever holds the token —
+in our setup, a scheduled Claude session using the family's Gmail connector,
+which also does the extraction itself, so no Anthropic key is involved either.
+
+Setup:
+
+1. Apply `supabase/schema.sql` (idempotent) to create the token table and the
+   two functions.
+2. Mint a token:
+   `npx tsx scripts/deals-token.ts mint --household carberry`
+3. Give the token to the thing that reads Gmail. It calls, with the public
+   `sb_publishable_` key as the `apikey` header:
+   - `POST /rest/v1/rpc/savings_context` `{"p_token": …}` → the staples to
+     match against
+   - `POST /rest/v1/rpc/ingest_deals` `{"p_token": …, "p_store": "costco",
+     "p_deals": [{item, price, savings, detail, ends, stapleId}, …]}` — one
+     call per store; each call replaces that store's deals and stamps the
+     store's status line "N deals · Gmail <date>".
+
+Re-posting an unchanged ad produces byte-identical rows (ids derive from
+store+item+price), so devices see no phantom changes. Revoke a token any time
+with `deals-token.ts revoke`. Subscribe to Food Lion's and Giant's weekly-ad
+emails on their sites — until those arrive, only stores with deal emails get
+imported this way.

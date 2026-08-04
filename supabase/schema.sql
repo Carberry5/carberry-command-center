@@ -911,6 +911,169 @@ alter table public.list_ingest_tokens force row level security;
 revoke all on public.list_ingest_tokens from anon, authenticated;
 
 -- ---------------------------------------------------------------------------
+-- Deals ingest — anything that can extract grocery deals and make an HTTP POST
+--
+-- The grocery sites bot-block server-side fetches, but their deal emails land
+-- in Gmail. A scheduled Claude session (or anything else) reads those emails,
+-- extracts the deals, and posts them here. Same trust model as ingest_list
+-- above: the caller presents a token, only its SHA-256 lives here, and the
+-- token resolves to exactly one household's deals — the worst a leaked one can
+-- do is rewrite a list of grocery prices.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.deals_ingest_tokens (
+  id            text primary key,
+  household_id  text not null references public.households(id) on delete cascade,
+  -- hex sha256 of the token. The token itself is shown once, at mint time.
+  token_hash    text not null unique,
+  label         text,
+  created_at    timestamptz not null default now(),
+  last_used_at  timestamptz
+);
+
+alter table public.deals_ingest_tokens add column if not exists household_id text;
+alter table public.deals_ingest_tokens add column if not exists token_hash text;
+alter table public.deals_ingest_tokens add column if not exists label text;
+alter table public.deals_ingest_tokens add column if not exists created_at timestamptz default now();
+alter table public.deals_ingest_tokens add column if not exists last_used_at timestamptz;
+
+create index if not exists deals_ingest_tokens_household_idx
+  on public.deals_ingest_tokens(household_id);
+
+/**
+ * What the extractor needs before it can match deals: the household's staples.
+ * Read-only, token-gated, and deliberately nothing else — no names, no
+ * calendar, no lists.
+ */
+create or replace function public.savings_context(p_token text)
+returns json
+language plpgsql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  tok public.deals_ingest_tokens%rowtype;
+begin
+  select * into tok
+    from public.deals_ingest_tokens
+   where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+  if not found then
+    raise exception 'invalid ingest token' using errcode = '28000';
+  end if;
+
+  return json_build_object(
+    'staples', coalesce((
+      select json_agg(json_build_object(
+               'id', s.id, 'name', s.name, 'category', s.category, 'note', s.note)
+             order by s.sort_order)
+        from public.staples s
+       where s.household_id = tok.household_id
+    ), '[]'::json)
+  );
+end
+$$;
+
+/**
+ * Replaces one store's deals with a freshly extracted set.
+ *
+ * `p_deals` is a json array of {item, price, savings, detail, ends, stapleId}.
+ * The whole store is replaced each call — deals are a cache of the current ad,
+ * not authored data, so nothing is lost by discarding the previous set. Ids
+ * are derived from store+item+price, so re-posting an unchanged ad produces
+ * byte-identical rows and the devices' differ sees nothing to sync.
+ */
+create or replace function public.ingest_deals(
+  p_token text,
+  p_store text,
+  p_deals jsonb,
+  p_source text default 'Gmail'
+)
+returns json
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  tok      public.deals_ingest_tokens%rowtype;
+  v_count  int;
+begin
+  if p_store is null or p_store not in ('foodlion', 'giant', 'costco', 'amazon') then
+    raise exception 'unknown store' using errcode = '22023';
+  end if;
+  if p_deals is null or jsonb_typeof(p_deals) <> 'array' then
+    raise exception 'deals must be a json array' using errcode = '22023';
+  end if;
+  -- A weekly ad is dozens of deals. Thousands is a bug or a probe.
+  if jsonb_array_length(p_deals) > 300 then
+    raise exception 'too many deals (max 300)' using errcode = '22023';
+  end if;
+
+  select * into tok
+    from public.deals_ingest_tokens
+   where token_hash = encode(sha256(convert_to(p_token, 'UTF8')), 'hex');
+  if not found then
+    raise exception 'invalid ingest token' using errcode = '28000';
+  end if;
+
+  delete from public.deals
+   where household_id = tok.household_id and store = p_store;
+
+  with cleaned as (
+    select btrim(d.value->>'item')                                   as item,
+           btrim(coalesce(d.value->>'price', ''))                    as price,
+           btrim(coalesce(d.value->>'savings', ''))                  as savings,
+           btrim(coalesce(d.value->>'detail', ''))                   as detail,
+           case when coalesce(d.value->>'ends', '') ~ '^\d{4}-\d{2}-\d{2}$'
+                then d.value->>'ends' else '' end                    as ends,
+           nullif(btrim(coalesce(d.value->>'stapleId', '')), '')     as staple_id,
+           d.ord
+      from jsonb_array_elements(p_deals) with ordinality as d(value, ord)
+     where btrim(coalesce(d.value->>'item', '')) <> ''
+       and btrim(coalesce(d.value->>'price', '')) <> ''
+  ),
+  inserted as (
+    insert into public.deals
+      (id, household_id, store, item, price, savings, detail, ends, staple_id, sort_order)
+    select distinct on (lower(c.item), c.price)
+           'ing:' || md5(p_store || '|' || lower(c.item) || '|' || c.price),
+           tok.household_id, p_store, c.item, c.price, c.savings, c.detail, c.ends,
+           -- Only keep matches that point at a staple this household really has.
+           (select s.id from public.staples s
+             where s.household_id = tok.household_id and s.id = c.staple_id),
+           1000 + c.ord
+      from cleaned c
+     order by lower(c.item), c.price, c.ord
+        on conflict (id) do nothing
+    returning 1
+  )
+  select count(*) into v_count from inserted;
+
+  insert into public.savings_status (household_id, store, status)
+  values (tok.household_id, p_store,
+          v_count || ' deals · ' || coalesce(nullif(btrim(p_source), ''), 'Gmail')
+                  || ' ' || to_char(now(), 'Mon FMDD'))
+  on conflict (household_id, store)
+  do update set status = excluded.status;
+
+  update public.deals_ingest_tokens set last_used_at = now() where id = tok.id;
+
+  return json_build_object('store', p_store, 'imported', v_count);
+end
+$$;
+
+revoke all on function public.savings_context(text) from public;
+revoke all on function public.ingest_deals(text, text, jsonb, text) from public;
+grant execute on function public.savings_context(text) to anon, authenticated;
+grant execute on function public.ingest_deals(text, text, jsonb, text) to anon, authenticated;
+
+-- The token table itself is unreachable from any browser role, exactly like
+-- list_ingest_tokens: RLS on with no policy, and no grants.
+alter table public.deals_ingest_tokens enable row level security;
+alter table public.deals_ingest_tokens force row level security;
+revoke all on public.deals_ingest_tokens from anon, authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Row level security
 -- ---------------------------------------------------------------------------
 
