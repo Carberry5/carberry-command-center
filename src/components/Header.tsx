@@ -12,7 +12,7 @@ const TITLES: Record<string, string> = {
   calendar: 'Calendar',
   chores: 'Chores & Stars',
   meals: 'Meal Plan',
-  savings: 'Grocery Savings',
+  savings: 'Grocery',
   lists: 'Lists',
   countdowns: 'Countdowns',
   sidekick: 'Sidekick',
