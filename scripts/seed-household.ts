@@ -38,6 +38,8 @@
  *   done          chore history — seeded history would invent star balances
  *   redemptions   ditto
  *   mealPlan      what's actually for dinner this week
+ *   events        the calendar is feed-synced and family-typed; demo events
+ *                 were deleted once already and must not creep back
  *   fit           WHOOP / Oura numbers; scripts/sync-wearables.ts owns these
  *   gl            Greenlight balances are hand-entered real money
  *   settings.pin  never overwritten once set
@@ -49,7 +51,7 @@
 import './env.ts'
 import { pathToFileURL } from 'node:url'
 import { createClient } from '@supabase/supabase-js'
-import type { Chore, Countdown, FamilyData, FamilyEvent, Member } from '../src/types.ts'
+import type { Chore, Countdown, FamilyData, Member } from '../src/types.ts'
 import { seed } from '../src/data/seed.ts'
 import { uid } from '../src/lib/dates.ts'
 import { configureCloud, diff, loadSnapshot, pushChanges } from '../src/store/cloudSync.ts'
@@ -81,7 +83,6 @@ const need = (n: string): string => process.env[n] ?? die(`missing ${n}`)
 const norm = (s: string) => s.trim().toLowerCase().replace(/\s+/g, ' ')
 
 const memberKey = (m: Member) => norm(m.name)
-const eventKey = (e: FamilyEvent) => `${e.date}|${norm(e.title)}`
 const choreKey = (c: Chore) => norm(c.title)
 const countdownKey = (c: Countdown) => norm(c.title)
 
@@ -147,15 +148,11 @@ export function mergeSeed(live: FamilyData, fresh: FamilyData, mode: Mode): Merg
   const remap = (ids: string[]) => ids.map((i) => idMap.get(i)).filter((i): i is string => !!i)
   const remapOne = (id: string | null | undefined) => (id ? idMap.get(id) ?? null : null)
 
-  // --- events -------------------------------------------------------------
-  const liveEvents = new Set(merged.events.map(eventKey))
-  let eventsAdded = 0
-  for (const se of fresh.events) {
-    if (liveEvents.has(eventKey(se))) continue
-    merged.events.push({ ...structuredClone(se), id: uid(), memberIds: remap(se.memberIds) })
-    eventsAdded++
-  }
-  add('event(s)', eventsAdded)
+  // --- events: never seeded -----------------------------------------------
+  // The seed's events are demo content, and the live calendar is fed by ICS
+  // syncs and the family's own typing. They were deliberately deleted from the
+  // household once; a merge that "helpfully" re-added them would undo that on
+  // every future seeding run.
 
   // --- chores -------------------------------------------------------------
   const liveChores = new Map(merged.chores.map((c) => [choreKey(c), c]))

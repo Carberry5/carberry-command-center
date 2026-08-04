@@ -61,6 +61,8 @@ section('empty household')
   check('every chore arrives', merged.chores.length === fresh.chores.length)
   check('every countdown arrives', merged.countdowns.length === fresh.countdowns.length)
   check('every meal favourite arrives', merged.favorites.length === fresh.favorites.length)
+  check('events are NOT seeded', merged.events.length === 0,
+    `${merged.events.length} demo event(s) leaked in`)
   check('chore history is NOT seeded', Object.keys(merged.done).length === 0,
     `${Object.keys(merged.done).length} day(s) of demo history leaked in`)
   check('redemptions are NOT seeded', merged.redemptions.length === 0)
