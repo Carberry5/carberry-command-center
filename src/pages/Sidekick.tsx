@@ -46,10 +46,16 @@ export function SidekickPage() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ text }),
       })
-      const json = (await res.json()) as {
+      let json: {
         events?: Omit<DraftEvent, 'selected'>[]
         listItems?: Omit<DraftItem, 'selected'>[]
         error?: string
+      }
+      try {
+        json = (await res.json()) as typeof json
+      } catch {
+        // HTML instead of JSON: a static host with no server behind /api.
+        throw new Error('The Sidekick needs its server — run `npm run dev` on the home machine.')
       }
       if (!res.ok) throw new Error(json.error ?? 'Sidekick could not read that.')
       const ev = (json.events ?? []).map((e) => ({ ...e, selected: true }))

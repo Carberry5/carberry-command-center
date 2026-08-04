@@ -54,8 +54,32 @@ from:
   results through its normal store, so they behave identically in vault mode
   and cloud mode.
 
-## Credentials
+## Where the Claude calls run
 
-Reuses the Sidekick's Anthropic key — `OP_ANTHROPIC_REF` (1Password) or
-`ANTHROPIC_API_KEY`. No key: the page still manages staples and shows saved
-deals; Sync / Extract / Build explain what's missing.
+The extraction and planning logic lives once, in
+`supabase/functions/savings/shared.ts`, and runs in whichever server exists:
+
+- **Locally** (`npm run dev` / `npm start`) the sidecar answers
+  `/api/savings/*`, reading the key from `OP_ANTHROPIC_REF` (1Password) or
+  `ANTHROPIC_API_KEY` in `.env`.
+- **On the hosted site** there is no server behind `/api` — GitHub Pages is
+  static — so the page falls back to the `savings` Supabase Edge Function.
+  The client tries the sidecar first and falls back automatically; a real
+  error from either server is shown as-is.
+
+### Deploying the Edge Function (once)
+
+```bash
+npx supabase login
+npx supabase link --project-ref rdmlrmilkgalixiafbfg
+npx supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
+npx supabase functions deploy savings
+```
+
+The function keeps the default JWT gate: only a signed-in household session
+can call it, and the Anthropic key lives in Supabase's secret store — never
+in the browser bundle. If invocations fail with a 401 despite being signed
+in, redeploy with `--no-verify-jwt` and rely on the key staying server-side.
+
+With no key configured anywhere, the page still manages staples and shows
+saved deals; Sync / Extract / Build explain what's missing.

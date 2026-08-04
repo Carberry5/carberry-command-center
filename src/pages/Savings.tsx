@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import type { Deal, SavingsStoreId, Staple } from '../types.ts'
 import { addDays, fmtDate, today, uid } from '../lib/dates.ts'
 import { SAVINGS_STORES, activeDeals, storeById } from '../lib/savings.ts'
+import { savingsRequest } from '../lib/savingsApi.ts'
 import { DANGER, GREEN, HEADING, INK, PURPLE, card, input, line, primaryBtn, quietBtn } from '../lib/theme.ts'
 import { useFamily } from '../store/FamilyStore.tsx'
 import { CheckBox } from '../components/CheckBox.tsx'
@@ -63,16 +64,11 @@ export function SavingsPage() {
     setBusyStore(store)
     setStoreError(null)
     try {
-      const res = await fetch('/api/savings/import', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ store, text, staples: sv.staples }),
+      const json = await savingsRequest<{ deals?: Omit<Deal, 'id' | 'store'>[] }>('import', {
+        store,
+        text,
+        staples: sv.staples,
       })
-      const json = (await res.json()) as {
-        deals?: Omit<Deal, 'id' | 'store'>[]
-        error?: string
-      }
-      if (!res.ok) throw new Error(json.error ?? 'Import failed')
       const fresh: Deal[] = (json.deals ?? []).map((d) => ({ ...d, id: uid(), store }))
       if (!fresh.length) throw new Error('No deals found in that — try pasting more of the page.')
       update((d) => {
@@ -103,17 +99,10 @@ export function SavingsPage() {
           .find((l) => l.name.toLowerCase() === 'groceries')
           ?.items.filter((i) => !i.done)
           .map((i) => i.text) ?? []
-      const res = await fetch('/api/savings/plan', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ staples: sv.staples, deals, dinners, groceries }),
-      })
-      const json = (await res.json()) as {
+      const json = await savingsRequest<{
         summary?: string
         picks?: Omit<DraftPick, 'selected'>[]
-        error?: string
-      }
-      if (!res.ok) throw new Error(json.error ?? 'Planning failed')
+      }>('plan', { staples: sv.staples, deals, dinners, groceries })
       update((d) => {
         d.savings.plan = { week: td, summary: json.summary ?? '', generatedAt: Date.now() }
       })
