@@ -42,12 +42,17 @@ export interface ExtractedDeal {
 export interface PlanInput {
   staples: StapleIn[]
   deals: DealIn[]
+  /** Nights the family has already planned, "YYYY-MM-DD: meal". Soft — a deep deal may propose a swap. */
   dinners: { date: string; meal: string }[]
+  /** The family's go-to meals, so deal-driven dinners land on food they actually eat. */
+  favorites: string[]
   groceries: string[]
 }
 
 export interface PlanResult {
   summary: string
+  /** The deal-driven dinner proposals, one per night that has a good answer. */
+  dinners: { date: string; meal: string; note: string }[]
   picks: { store: StoreId; item: string; note: string }[]
 }
 
@@ -249,7 +254,23 @@ const PLAN_SCHEMA = {
     summary: {
       type: 'string',
       description:
-        "The week's shopping strategy in short plain-text paragraphs and dashed lists: which store leads, what to stock up on, what to skip. No markdown headings.",
+        "The week's strategy in short plain-text paragraphs and dashed lists: which deals shaped the dinners, which store leads, what to stock up on, what to skip. No markdown headings.",
+    },
+    dinners: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          date: { type: 'string', description: 'YYYY-MM-DD, within the next 7 days' },
+          meal: { type: 'string', description: 'The dinner, as it should appear on the meal plan ("Steak night")' },
+          note: {
+            type: 'string',
+            description: 'The deal driving it: "NY strip $9.99/lb at Costco". "" only if no deal applies.',
+          },
+        },
+        required: ['date', 'meal', 'note'],
+        additionalProperties: false,
+      },
     },
     picks: {
       type: 'array',
@@ -265,7 +286,7 @@ const PLAN_SCHEMA = {
       },
     },
   },
-  required: ['summary', 'picks'],
+  required: ['summary', 'dinners', 'picks'],
   additionalProperties: false,
 }
 
@@ -296,12 +317,17 @@ export async function buildPlan(apiKey: string, input: PlanInput): Promise<PlanR
       format: { type: 'json_schema', schema: PLAN_SCHEMA },
     },
     system:
-      'You are a family grocery strategist. Before the weekly shop, you look at the current deals across their four ' +
-      'stores, their staples, the week\'s dinner plan and what is already on the grocery list, and build the plan that ' +
-      'saves the most money: which store to lead with this week, which staples to buy on sale (and stock up on when a ' +
-      'deal is deep and the item keeps), which grocery-list items line up with a deal, and what to hold off on because ' +
-      'it is not on sale anywhere. Picks are concrete list-ready items, each tied to a real deal from the list, best ' +
-      'savings first — never invent a deal or a price. If a store has no useful deals, say so briefly in the summary.',
+      'You are a family grocery strategist, and the deals drive the dinner plan — not the other way around. Before ' +
+      'the weekly shop, look at the current deals across their four stores and PROPOSE the week\'s dinners around ' +
+      'what is on sale: a deep deal on a protein becomes that night\'s dinner, drawing on the family\'s favorite ' +
+      'meals whenever one fits the sale ingredients. Propose a dinner for each of the next 7 nights that has a good ' +
+      'deal-backed answer; skip nights that don\'t. A night the family already planned keeps their meal unless a ' +
+      'deal makes a clearly cheaper or better swap — propose the swap and say why in the note. Then the shopping ' +
+      'side: which store to lead with, which staples to buy on sale (stock up when a deal is deep and the item ' +
+      'keeps), which grocery-list items line up with a deal, and what to hold off on because it is not on sale ' +
+      'anywhere. Picks are concrete list-ready items, each tied to a real deal, best savings first, and should ' +
+      'cover the ingredients the proposed dinners need. Never invent a deal or a price. If a store has no useful ' +
+      'deals, say so briefly in the summary.',
     messages: [
       {
         role: 'user',
@@ -309,7 +335,8 @@ export async function buildPlan(apiKey: string, input: PlanInput): Promise<PlanR
           `Today is ${weekday}, ${today}.\n\n` +
           `STAPLES:\n${input.staples.map((s) => `${s.name} (${s.category})${s.note ? ` — ${s.note}` : ''}`).join('\n')}\n\n` +
           `CURRENT DEALS:\n${dealLines || '(none imported yet)'}\n\n` +
-          `DINNER PLAN THIS WEEK:\n${input.dinners.map((d) => `${d.date}: ${d.meal}`).join('\n') || '(not planned yet)'}\n\n` +
+          `FAMILY FAVORITE MEALS:\n${input.favorites.join('\n') || '(none listed)'}\n\n` +
+          `NIGHTS ALREADY PLANNED:\n${input.dinners.map((d) => `${d.date}: ${d.meal}`).join('\n') || '(none — the week is open)'}\n\n` +
           `ALREADY ON THE GROCERY LIST:\n${input.groceries.join('\n') || '(empty)'}`,
       },
     ],
@@ -318,6 +345,9 @@ export async function buildPlan(apiKey: string, input: PlanInput): Promise<PlanR
   const parsed = JSON.parse(raw) as PlanResult
   return {
     summary: (parsed.summary ?? '').trim(),
+    dinners: (parsed.dinners ?? []).filter(
+      (d) => d.meal?.trim() && /^\d{4}-\d{2}-\d{2}$/.test((d.date ?? '').trim())
+    ),
     picks: (parsed.picks ?? []).filter((p) => p.item?.trim()),
   }
 }

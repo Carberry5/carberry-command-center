@@ -59,8 +59,10 @@ export async function extractDeals(
 export interface PlanInput {
   staples: Staple[]
   deals: Deal[]
-  /** The next week's dinner plan, "YYYY-MM-DD: meal" lines. */
+  /** Nights already planned, "YYYY-MM-DD: meal" lines — soft, a deal may propose a swap. */
   dinners: { date: string; meal: string }[]
+  /** The family's favorite meals, so deal-driven dinners land on food they eat. */
+  favorites: string[]
   /** Unchecked grocery-list items. */
   groceries: string[]
 }

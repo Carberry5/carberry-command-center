@@ -15,6 +15,15 @@ interface DraftPick {
   selected: boolean
 }
 
+interface DraftDinner {
+  date: string
+  meal: string
+  note: string
+  /** What's currently planned that night — '' when the night is open. */
+  replaces: string
+  selected: boolean
+}
+
 /** "2026-08-05" → "Aug 5" — tight enough for a status line. */
 const monthDay = (ds: string) => fmtDate(ds).replace(/^\w+, /, '')
 
@@ -35,6 +44,7 @@ export function SavingsPage() {
   const [planBusy, setPlanBusy] = useState(false)
   const [planError, setPlanError] = useState<string | null>(null)
   const [picks, setPicks] = useState<DraftPick[] | null>(null)
+  const [draftDinners, setDraftDinners] = useState<DraftDinner[] | null>(null)
   const [showUnmatched, setShowUnmatched] = useState(false)
   const [newStaple, setNewStaple] = useState('')
   const [newCategory, setNewCategory] = useState('')
@@ -90,8 +100,10 @@ export function SavingsPage() {
     setPlanBusy(true)
     setPlanError(null)
     setPicks(null)
+    setDraftDinners(null)
     try {
-      const dinners = Array.from({ length: 7 }, (_, i) => addDays(td, i))
+      const week = Array.from({ length: 7 }, (_, i) => addDays(td, i))
+      const dinners = week
         .filter((ds) => data.mealPlan[ds])
         .map((ds) => ({ date: ds, meal: data.mealPlan[ds] }))
       const groceries =
@@ -101,11 +113,30 @@ export function SavingsPage() {
           .map((i) => i.text) ?? []
       const json = await savingsRequest<{
         summary?: string
+        dinners?: Omit<DraftDinner, 'selected' | 'replaces'>[]
         picks?: Omit<DraftPick, 'selected'>[]
-      }>('plan', { staples: sv.staples, deals, dinners, groceries })
+      }>('plan', {
+        staples: sv.staples,
+        deals,
+        dinners,
+        favorites: data.favorites.map((f) => f.name),
+        groceries,
+      })
       update((d) => {
         d.savings.plan = { week: td, summary: json.summary ?? '', generatedAt: Date.now() }
       })
+      setDraftDinners(
+        (json.dinners ?? [])
+          .filter((p) => week.includes(p.date))
+          // Re-proposing the meal a night already has is agreement, not a change.
+          .filter((p) => (data.mealPlan[p.date] ?? '').toLowerCase() !== p.meal.toLowerCase())
+          .map((p) => ({
+            ...p,
+            replaces: data.mealPlan[p.date] ?? '',
+            // Open nights are pre-approved; overwriting somebody's plan is opt-in.
+            selected: !data.mealPlan[p.date],
+          }))
+      )
       setPicks((json.picks ?? []).map((p) => ({ ...p, selected: true })))
     } catch (err) {
       setPlanError(err instanceof Error ? err.message : 'Planning failed')
@@ -114,11 +145,22 @@ export function SavingsPage() {
     }
   }
 
-  const commitPicks = () => {
+  const commitPlan = () => {
+    const nights = (draftDinners ?? []).filter((p) => p.selected)
     const chosen = (picks ?? []).filter((p) => p.selected)
+    update((d) => {
+      nights.forEach((p) => {
+        d.mealPlan[p.date] = p.meal
+      })
+    })
     chosen.forEach((p) => addToGroceries(`${p.item} (${storeById(p.store).name})`))
-    toast(`Added ${chosen.length} item${chosen.length === 1 ? '' : 's'} to Groceries`)
+    const parts = [
+      nights.length ? `${nights.length} dinner night${nights.length === 1 ? '' : 's'}` : '',
+      chosen.length ? `${chosen.length} grocery item${chosen.length === 1 ? '' : 's'}` : '',
+    ].filter(Boolean)
+    toast(parts.length ? `Set ${parts.join(' and ')}` : 'Nothing selected')
     setPicks(null)
+    setDraftDinners(null)
   }
 
   const addStaple = () => {
@@ -307,35 +349,95 @@ export function SavingsPage() {
         </div>
       ) : (
         <div style={{ color: line(0.5), fontWeight: 600, fontSize: '.9em' }}>
-          Sync the stores, then build the plan — it lines the week's dinners and grocery list up against
-          every deal and says where to spend.
+          Sync the stores, then build the plan — the deals propose the week's dinner nights, and the
+          shopping list follows from what's actually on sale.
         </div>
       )}
 
-      {picks?.length ? (
+      {picks?.length || draftDinners?.length ? (
         <div style={{ ...card, border: `1.5px solid rgba(124,92,224,.5)`, padding: '18px 20px', marginTop: 12, animation: 'fadeUp .3s ease both' }}>
-          <h3 style={{ ...HEADING, fontSize: '1.05em', margin: '0 0 8px' }}>
-            Deal-backed picks — uncheck anything you don't want:
-          </h3>
-          {picks.map((p, i) => (
-            <div
-              key={i}
-              onClick={() => setPicks((prev) => prev!.map((x, j) => (j === i ? { ...x, selected: !x.selected } : x)))}
-              style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 6px', borderBottom: `1px solid ${line(0.07)}`, cursor: 'pointer' }}
-            >
-              <CheckBox on={p.selected} />
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 700, fontSize: '.95em' }}>{p.item}</div>
-                <div style={{ color: line(0.55), fontWeight: 600, fontSize: '.8em' }}>{p.note}</div>
-              </div>
-              {storeChip(p.store)}
-            </div>
-          ))}
+          {draftDinners?.length ? (
+            <>
+              <h3 style={{ ...HEADING, fontSize: '1.05em', margin: '0 0 8px' }}>
+                Dinner nights the deals suggest — check what sounds good:
+              </h3>
+              {draftDinners.map((p, i) => (
+                <div
+                  key={`d${i}`}
+                  onClick={() =>
+                    setDraftDinners((prev) => prev!.map((x, j) => (j === i ? { ...x, selected: !x.selected } : x)))
+                  }
+                  style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 6px', borderBottom: `1px solid ${line(0.07)}`, cursor: 'pointer' }}
+                >
+                  <CheckBox on={p.selected} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '.95em' }}>
+                      {fmtDate(p.date)} · <span style={{ color: GREEN }}>{p.meal}</span>
+                    </div>
+                    <div style={{ color: line(0.55), fontWeight: 600, fontSize: '.8em' }}>
+                      {[p.note, p.replaces ? `replaces “${p.replaces}”` : ''].filter(Boolean).join(' · ')}
+                    </div>
+                  </div>
+                  <span
+                    style={{
+                      fontWeight: 700,
+                      fontSize: '.72em',
+                      color: '#7A4DBB',
+                      background: 'rgba(138,99,201,.12)',
+                      borderRadius: 999,
+                      padding: '3px 10px',
+                    }}
+                  >
+                    dinner
+                  </span>
+                </div>
+              ))}
+            </>
+          ) : null}
+
+          {picks?.length ? (
+            <>
+              <h3 style={{ ...HEADING, fontSize: '1.05em', margin: `${draftDinners?.length ? 14 : 0}px 0 8px` }}>
+                And the shopping to match:
+              </h3>
+              {picks.map((p, i) => (
+                <div
+                  key={`p${i}`}
+                  onClick={() => setPicks((prev) => prev!.map((x, j) => (j === i ? { ...x, selected: !x.selected } : x)))}
+                  style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '8px 6px', borderBottom: `1px solid ${line(0.07)}`, cursor: 'pointer' }}
+                >
+                  <CheckBox on={p.selected} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 700, fontSize: '.95em' }}>{p.item}</div>
+                    <div style={{ color: line(0.55), fontWeight: 600, fontSize: '.8em' }}>{p.note}</div>
+                  </div>
+                  {storeChip(p.store)}
+                </div>
+              ))}
+            </>
+          ) : null}
+
           <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
-            <button onClick={commitPicks} style={primaryBtn}>
-              Add {picks.filter((p) => p.selected).length} to Groceries
+            <button onClick={commitPlan} style={primaryBtn}>
+              Apply{' '}
+              {[
+                draftDinners?.filter((p) => p.selected).length
+                  ? `${draftDinners.filter((p) => p.selected).length} dinner${draftDinners.filter((p) => p.selected).length === 1 ? '' : 's'}`
+                  : '',
+                picks?.filter((p) => p.selected).length
+                  ? `${picks.filter((p) => p.selected).length} grocery item${picks.filter((p) => p.selected).length === 1 ? '' : 's'}`
+                  : '',
+              ]
+                .filter(Boolean)
+                .join(' + ') || 'nothing'}
             </button>
-            <button onClick={() => setPicks(null)} style={quietBtn}>
+            <button
+              onClick={() => {
+                setPicks(null)
+                setDraftDinners(null)
+              }}
+              style={quietBtn}
+            >
               Discard
             </button>
           </div>
