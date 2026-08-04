@@ -24,6 +24,7 @@ import { ListsPage } from './pages/Lists.tsx'
 import { CountdownsPage } from './pages/Countdowns.tsx'
 import { SidekickPage } from './pages/Sidekick.tsx'
 import { SettingsPage } from './pages/Settings.tsx'
+import { DisplayPage } from './pages/Display.tsx'
 
 const PAGES = {
   today: TodayPage,
@@ -39,9 +40,15 @@ const PAGES = {
 } as const
 
 export function App() {
-  const { page } = useFamily()
+  const { page, prefs } = useFamily()
   const { narrow, rootFontSize } = useLayout()
   const Page = PAGES[page]
+
+  // Wall-display mode replaces the whole shell rather than hiding parts of it:
+  // the rail, the header and the page padding all exist to support navigation,
+  // and a kitchen display navigates nowhere. Modals stay mounted so a toast can
+  // still surface, but nothing on this screen opens one.
+  if (prefs.display) return <DisplayPage />
 
   return (
     <div

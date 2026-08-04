@@ -10,6 +10,7 @@ import {
 } from 'react'
 import type { FamilyData, PageId } from '../types.ts'
 import { migrate } from '../data/migrate.ts'
+import { deepClone } from '../lib/clone.ts'
 import { seed } from '../data/seed.ts'
 import { today } from '../lib/dates.ts'
 import { fetchHistory, type HistoryFact } from '../lib/onThisDay.ts'
@@ -34,18 +35,49 @@ export interface DisplayPrefs {
   tvMode: boolean
   showWeather: boolean
   weekStartMonday: boolean
+  /**
+   * Wall-display mode: no navigation, no controls, one screenful that never
+   * scrolls. Meant for an Echo Show or a spare tablet propped in the kitchen,
+   * where nobody is going to scroll and nothing should need tapping.
+   */
+  display: boolean
 }
 
 const PREFS_KEY = 'carberry.prefs.v1'
 
+const DEFAULT_PREFS: DisplayPrefs = {
+  tvMode: false,
+  showWeather: true,
+  weekStartMonday: false,
+  display: false,
+}
+
+/**
+ * `?display` / `?display=0` in the URL wins over the stored preference, so an
+ * Echo Show can be pointed at one bookmark and get the wall layout without
+ * anyone having to find Settings on a 5-inch screen. It is written back to
+ * localStorage, which means the query string only has to be right once.
+ */
+function displayFromUrl(): boolean | null {
+  try {
+    const v = new URLSearchParams(window.location.search).get('display')
+    if (v === null) return null
+    return v !== '0' && v !== 'false'
+  } catch {
+    return null
+  }
+}
+
 function loadPrefs(): DisplayPrefs {
+  let prefs = DEFAULT_PREFS
   try {
     const raw = localStorage.getItem(PREFS_KEY)
-    if (raw) return { tvMode: false, showWeather: true, weekStartMonday: false, ...JSON.parse(raw) }
+    if (raw) prefs = { ...DEFAULT_PREFS, ...JSON.parse(raw) }
   } catch {
     /* ignore */
   }
-  return { tvMode: false, showWeather: true, weekStartMonday: false }
+  const fromUrl = displayFromUrl()
+  return fromUrl === null ? prefs : { ...prefs, display: fromUrl }
 }
 
 interface PinPrompt {
@@ -178,7 +210,7 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
 
   const update = useCallback(
     (fn: (draft: FamilyData) => void) => {
-      const next = structuredClone(dataRef.current)
+      const next = deepClone(dataRef.current)
       fn(next)
       editSeq.current += 1
       applyData(next)
