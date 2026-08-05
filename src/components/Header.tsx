@@ -8,7 +8,11 @@ import { startVoice } from '../lib/voice.ts'
 import { Icon, LockIcon, MicIcon } from './Icon.tsx'
 
 const TITLES: Record<string, string> = {
-  today: 'Carberry Command Center',
+  // Every page titles itself; the brand lives in the rail, so repeating it here
+  // would print "Carberry Command Center" twice on the one screen that matters
+  // most. On a phone the rail's header is hidden, so the brand comes back —
+  // see `title` below.
+  today: 'Today',
   calendar: 'Calendar',
   chores: 'Chores & Stars',
   meals: 'Meal Plan',
@@ -27,7 +31,14 @@ export function Header() {
 
   const member = memberById(data, memberSel)
   const nowDate = new Date(now)
-  const title = page === 'member' ? `${member?.name ?? 'Family'}'s page` : TITLES[page] ?? 'Carberry Command Center'
+  const title =
+    page === 'member'
+      ? `${member?.name ?? 'Family'}'s page`
+      : // Bottom tabs replace the rail on a phone, taking the wordmark with
+        // them — so Today carries the brand there and nowhere else.
+        page === 'today' && narrow
+        ? 'Carberry Command Center'
+        : TITLES[page] ?? 'Carberry Command Center'
 
   const dayWx = wx?.dy[today()]
   // On Today the weather already headlines the hero, so the chip would be a repeat.
