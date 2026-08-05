@@ -4,6 +4,7 @@ import { CREAM, INK, line } from '../lib/theme.ts'
 import { useFamily, useLayout } from '../store/FamilyStore.tsx'
 import { Avatar } from './Avatar.tsx'
 import { Icon, NAV_ICONS } from './Icon.tsx'
+import { Logo } from './Logo.tsx'
 
 const PAGES: [PageId, string][] = [
   ['today', 'Today'],
@@ -99,22 +100,7 @@ export function Rail() {
             ...(mid ? { justifyContent: 'center' } : {}),
           }}
         >
-          <div
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 12,
-              background: INK,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            <svg width={22} height={22} viewBox="0 0 24 24" fill="#7C5CE0">
-              <path d="M12 3.5l2.4 5 5.4.7-4 3.8 1 5.4-4.8-2.6-4.8 2.6 1-5.4-4-3.8 5.4-.7z" />
-            </svg>
-          </div>
+          <Logo size={40} style={{ flexShrink: 0 }} />
           {!mid ? (
             <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 600, fontSize: '1.05em', lineHeight: 1.1 }}>
               Carberry
