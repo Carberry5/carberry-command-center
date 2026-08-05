@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 116 116">
+  <!-- The Carberry mark, simplified for 16px: canopy-C, trunk, four lit tips. -->
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M56 40Q42 50 45 66Q55 54 56 40Z" fill="#C9A063"/>
+    <path d="M61 94L69 107H57Z" fill="#C0603A"/>
+    <path d="M75.2 29.4A30 30 0 1 0 68.3 82.2C66 92 60 96.5 58 107" stroke="#2F5A47" stroke-width="9"/>
+    <path d="M59 97C55 100 50.5 103.5 46.5 107" stroke="#2F5A47" stroke-width="8"/>
+    <path d="M44 33.5Q38 27 31.5 22.5" stroke="#C0603A" stroke-width="3.6"/>
+    <path d="M31.5 61.5Q24 63 17.5 64" stroke="#C0603A" stroke-width="3.6"/>
+    <path d="M39.5 30.4Q31.6 22.6 24 17.4" stroke="#2F5A47" stroke-width="5.4"/>
+    <path d="M50.7 24.9Q48.9 13.8 48.8 4.8" stroke="#2F5A47" stroke-width="5.4"/>
+    <path d="M69.2 26.2Q75.1 16.5 81.2 9.5" stroke="#2F5A47" stroke-width="5.4"/>
+    <path d="M29.5 63.3Q19.2 65.4 10.5 66" stroke="#2F5A47" stroke-width="5.4"/>
+    <circle cx="24" cy="17.4" r="5" fill="#FBEFD2"/>
+    <circle cx="48.8" cy="4.8" r="5.4" fill="#FBEFD2"/>
+    <circle cx="81.2" cy="9.5" r="5" fill="#FBEFD2"/>
+    <circle cx="10.5" cy="66" r="4.8" fill="#FBEFD2"/>
+  </g>
+</svg>
