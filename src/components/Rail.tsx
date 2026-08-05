@@ -102,10 +102,31 @@ export function Rail() {
         >
           <Logo size={40} style={{ flexShrink: 0 }} />
           {!mid ? (
-            <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 600, fontSize: '1.05em', lineHeight: 1.1 }}>
-              Carberry
-              <br />
-              Command Center
+            // A lockup, not a wrapped sentence: the name reads as the brand and
+            // the descriptor sits under it, so two lines look chosen.
+            <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+              <span
+                style={{
+                  fontFamily: "'Outfit', sans-serif",
+                  fontWeight: 600,
+                  fontSize: '1.16em',
+                  lineHeight: 1.05,
+                }}
+              >
+                Carberry
+              </span>
+              <span
+                style={{
+                  fontSize: '.62em',
+                  fontWeight: 800,
+                  letterSpacing: '.1em',
+                  textTransform: 'uppercase',
+                  color: line(0.45),
+                  lineHeight: 1.1,
+                }}
+              >
+                Command Center
+              </span>
             </span>
           ) : null}
         </div>
