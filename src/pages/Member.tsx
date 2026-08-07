@@ -1,7 +1,7 @@
-import { DOW_NAMES, daysUntil, dowOf, addDays, fmtDate, today } from '../lib/dates.ts'
+import { DOW_NAMES, daysUntil, dowOf, addDays, fmtDate, fmtTime, today } from '../lib/dates.ts'
 import { kidTheme } from '../lib/kidThemes.ts'
 import { preflightActive } from '../lib/preflight.ts'
-import { balances, choresFor, eventsOn, memberById, money } from '../lib/selectors.ts'
+import { balances, choresFor, eventsOn, memberById, money, upcomingFor } from '../lib/selectors.ts'
 import {
   CREAM,
   FAM,
@@ -40,6 +40,7 @@ export function MemberPage() {
   const bal = balances(data)[member.id] ?? 0
 
   const agenda = eventsOn(data, td, null).filter((e) => !e.memberIds?.length || e.memberIds.includes(member.id))
+  const upcoming = upcomingFor(data, member.id, { from: td, days: 45, limit: 6 })
   const chores = choresFor(data, member.id, dow)
   const greenlight = isKid ? data.gl[member.id] : undefined
   const fit = !isKid ? data.fit[member.id] : undefined
@@ -226,6 +227,60 @@ export function MemberPage() {
               </div>
             )}
           </div>
+
+          {/*
+            Everything on this page used to be today-only, which is right for a
+            checklist and wrong for anything the family is looking forward to.
+            A launch three weeks out or a game on Saturday had nowhere to appear.
+          */}
+          {upcoming.length ? (
+            <div style={cardPad}>
+              <h2 style={{ ...h2, margin: '0 0 8px' }}>Coming up</h2>
+              {upcoming.map((e) => (
+                <div
+                  key={`${e.id}-${e.date}`}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 10,
+                    padding: '7px 4px',
+                    borderBottom: `1px solid ${line(0.07)}`,
+                  }}
+                >
+                  <span
+                    style={{
+                      width: 96,
+                      flexShrink: 0,
+                      fontWeight: 800,
+                      fontSize: '.82em',
+                      color: line(0.55),
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {fmtDate(e.date)}
+                  </span>
+                  <span
+                    style={{
+                      width: 5,
+                      alignSelf: 'stretch',
+                      flexShrink: 0,
+                      borderRadius: 3,
+                      background: e.feedColor ?? member.color,
+                    }}
+                  />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '.95em' }}>{e.title}</div>
+                    {e.loc ? (
+                      <div style={{ color: line(0.5), fontWeight: 600, fontSize: '.8em' }}>{e.loc}</div>
+                    ) : null}
+                  </div>
+                  <span style={{ fontWeight: 700, fontSize: '.82em', color: line(0.5), whiteSpace: 'nowrap' }}>
+                    {fmtTime(e.start)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
 
           {preflightActive(data.preflight, dow) && isKid ? <PreflightMemberCard member={member} /> : null}
 
