@@ -70,6 +70,30 @@ const makeClient = () =>
     auth: { persistSession: false, autoRefreshToken: false },
   })
 
+/**
+ * One retry on a timeout or a 5xx, because the alternative is a feed that goes
+ * red for three hours over a single slow response. Deliberately not a general
+ * retry: a 404 or a 401 will not improve by asking again.
+ */
+async function fetchWithRetry(url: string, timeoutMs: number): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      const res = await fetch(url, {
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(timeoutMs),
+      })
+      if (res.status >= 500 && attempt === 1) {
+        console.log(`    (${res.status}, retrying once)`)
+        continue
+      }
+      return res
+    } catch (err) {
+      if (attempt > 1) throw err
+      console.log(`    (${err instanceof Error ? err.message : String(err)}, retrying once)`)
+    }
+  }
+}
+
 async function main() {
   sb = makeClient()
 
@@ -102,10 +126,12 @@ async function main() {
     // inherits member tagging, the calendar merge and the status line.
     if (isLaunchFeed(feed.url)) {
       try {
-        const res = await fetch(launchesApiUrl(feed.url), {
-          headers: { accept: 'application/json' },
-          signal: AbortSignal.timeout(30000),
-        })
+        // 90 seconds, and one retry. Launch Library 2 is a free community API
+        // and a cold query regularly takes most of a minute — the first live
+        // run of this hit exactly the 30s ICS timeout and aborted, which reads
+        // like a broken integration when it is only a slow one. A calendar
+        // that refreshes every three hours can afford to wait.
+        const res = await fetchWithRetry(launchesApiUrl(feed.url), 90000)
         if (!res.ok) throw new Error(`responded ${res.status}`)
         const events = launchesToEvents((await res.json()) as LaunchesResponse)
         console.log(`  ${label}: ${events.length} launch(es)`)
