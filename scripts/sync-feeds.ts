@@ -19,6 +19,7 @@
 import './env.ts'
 import { createClient } from '@supabase/supabase-js'
 import { parseIcs } from '../src/lib/ics.ts'
+import { isLaunchFeed, launchesApiUrl, launchesToEvents, type LaunchesResponse } from '../src/lib/launches.ts'
 import type { FamilyEvent } from '../src/types.ts'
 
 const DRY_RUN = process.argv.includes('--dry-run')
@@ -93,6 +94,30 @@ async function main() {
     // in Actions. Those feeds stay a local-sidecar concern for now.
     if (!feed.url && feed.op_ref) {
       console.log(`  ${label}: skipped (url is a 1Password reference)`)
+      continue
+    }
+
+    // A `spacedevs://launches` feed is not a calendar to fetch — it is the
+    // Launch Library 2 API. Handled here rather than as a separate job so it
+    // inherits member tagging, the calendar merge and the status line.
+    if (isLaunchFeed(feed.url)) {
+      try {
+        const res = await fetch(launchesApiUrl(feed.url), {
+          headers: { accept: 'application/json' },
+          signal: AbortSignal.timeout(30000),
+        })
+        if (!res.ok) throw new Error(`responded ${res.status}`)
+        const events = launchesToEvents((await res.json()) as LaunchesResponse)
+        console.log(`  ${label}: ${events.length} launch(es)`)
+        if (DRY_RUN) continue
+        await replaceFeedEvents(feed, events)
+        await setStatus(feed, `${events.length} launches · synced ${stamp()}`)
+      } catch (err) {
+        failures++
+        const msg = err instanceof Error ? err.message : String(err)
+        console.log(`  ${label}: FAILED — ${msg}`)
+        if (!DRY_RUN) await setStatus(feed, `Sync failed: ${msg}`.slice(0, 200))
+      }
       continue
     }
 
