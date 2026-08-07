@@ -15,7 +15,8 @@
     "smoke": "node scripts/smoke.mjs",
     "test:cloud": "bash scripts/cloud-test.sh",
     "test:seed": "tsx scripts/seed-test.ts",
-    "test:gtasks": "tsx scripts/gtasks-test.ts"
+    "test:gtasks": "tsx scripts/gtasks-test.ts",
+    "test:winddown": "tsx scripts/winddown-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

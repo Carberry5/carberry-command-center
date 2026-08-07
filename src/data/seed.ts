@@ -1,5 +1,6 @@
 import type { FamilyData, Member, Preflight } from '../types.ts'
 import { addDays, dowOf, uid, ymd } from '../lib/dates.ts'
+import { DEFAULT_BEDTIME, DEFAULT_SCREENS_OFF } from '../lib/winddown.ts'
 
 /**
  * The Carberry family's starting data. Used the first time the app runs against
@@ -212,6 +213,12 @@ export function seed(): FamilyData {
     },
     feedEv: {},
     preflight: seedPreflight(members),
+    windDown: {
+      open: true,
+      bedtime: DEFAULT_BEDTIME,
+      screensOff: DEFAULT_SCREENS_OFF,
+      steps: [{ id: 'wd1', text: 'Pyjamas on and clothes out for tomorrow' }],
+    },
     fit: {
       p: { kind: 'whoop', sleep: 84, strain: 12.4 },
       e: { kind: 'oura', sleep: 88, act: 72 },

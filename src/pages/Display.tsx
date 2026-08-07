@@ -1,5 +1,6 @@
 import { daysUntil, fmtTime, today } from '../lib/dates.ts'
 import { kidConfig, preflightActive, preflightRows } from '../lib/preflight.ts'
+import { minutesUntil, windDownRows, windDownWindow } from '../lib/winddown.ts'
 import { balances, eventColor, eventsOn, isDone } from '../lib/selectors.ts'
 import { CREAM, HEADING } from '../lib/theme.ts'
 import { weatherIcon } from '../lib/weather.ts'
@@ -55,6 +56,16 @@ export function DisplayPage() {
     const done = tickable.filter((r) => isDone(data, td, r.key!, kidId)).length
     return { done, total: tickable.length }
   }
+
+  // The evening counterpart. Same slot, because the two never overlap: one is
+  // a school morning, the other a school night.
+  const winding = windDownWindow(data.windDown, nowDate)
+  const settling = (kidId: string) => {
+    const rows = windDownRows(data.windDown, kidId)
+    const done = rows.filter((r) => isDone(data, td, r.key, kidId)).length
+    return { done, total: rows.length }
+  }
+  const toBed = minutesUntil(nowDate, data.windDown?.bedtime ?? '20:30')
 
   const clock = nowDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
   const date = nowDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -206,7 +217,17 @@ export function DisplayPage() {
         </Panel>
 
         <div style={{ display: 'grid', gridTemplateRows: '1fr auto', gap: 'clamp(10px,1.6vh,20px)', minHeight: 0 }}>
-          <Panel title={preflight ? 'Morning pre-flight' : 'Chore stars'}>
+          <Panel
+            title={
+              winding
+                ? toBed > 0
+                  ? `Wind-down · ${toBed} min to bed`
+                  : 'Wind-down · bedtime'
+                : preflight
+                  ? 'Morning pre-flight'
+                  : 'Chore stars'
+            }
+          >
             {kids.length ? (
               kids.map((k) => (
                 <div
@@ -232,7 +253,24 @@ export function DisplayPage() {
                   >
                     {k.name}
                   </span>
-                  {preflight ? (
+                  {winding ? (
+                    (() => {
+                      const { done, total } = settling(k.id)
+                      const settled = total > 0 && done === total
+                      return (
+                        <span
+                          style={{
+                            fontWeight: 800,
+                            fontSize: 'clamp(13px,2.9vh,28px)',
+                            color: settled ? '#4ADE80' : toBed < 0 ? '#F87171' : CREAM,
+                            opacity: settled ? 1 : 0.8,
+                          }}
+                        >
+                          {done}/{total}
+                        </span>
+                      )
+                    })()
+                  ) : preflight ? (
                     (() => {
                       const { done, total } = readiness(k.id)
                       const ready = total > 0 && done === total

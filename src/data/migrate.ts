@@ -57,6 +57,9 @@ export function migrate(input: Partial<FamilyData> | null | undefined): FamilyDa
     }
   }
 
+  // Added after the first households existed, so stored data will not have it.
+  d.windDown = { ...base.windDown, ...(input.windDown ?? {}) }
+
   d.fit = { ...base.fit, ...(input.fit ?? {}) }
   d.gl = { ...base.gl, ...(input.gl ?? {}) }
 

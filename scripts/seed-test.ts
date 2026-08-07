@@ -46,6 +46,7 @@ function emptyHousehold(): FamilyData {
     favorites: [], mealPlan: {}, lists: [], countdowns: [],
     settings: { pin: '1234', zip: '', lat: 0, lon: 0, place: '', feeds: [] },
     feedEv: {}, preflight: { open: true, depart: '07:30', kids: {} },
+    windDown: { open: true, bedtime: '20:30', screensOff: '20:00', steps: [] },
     fit: {}, gl: {}, secrets: [],
     savings: { staples: [], deals: [], status: {}, plan: null },
   }
