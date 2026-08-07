@@ -33,6 +33,12 @@ create table if not exists public.households (
   place             text not null default '',
   preflight_open    boolean not null default true,
   preflight_depart  text not null default '07:30',
+  -- Evening wind-down. Times live on the household rather than per kid: the
+  -- family asked for one bedtime, and a per-kid column that is always equal is
+  -- a migration waiting to happen.
+  winddown_open     boolean not null default true,
+  winddown_bedtime  text not null default '20:30',
+  winddown_screens  text not null default '20:00',
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
@@ -353,6 +359,26 @@ create table if not exists public.preflight_bring (
 create index if not exists preflight_bring_member_idx on public.preflight_bring(household_id, member_id);
 
 -- ---------------------------------------------------------------------------
+-- Evening wind-down
+--
+-- "Screens off", "Brush teeth" and "In bed" are derived from the household's
+-- times in src/lib/winddown.ts rather than stored, so changing bedtime in
+-- Settings changes the checklist with no migration. This table is only the
+-- extra steps a family adds on top.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.winddown_steps (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  text         text not null default '',
+  -- "HH:MM" this step should be done by, or null for no deadline.
+  by_time      text,
+  sort_order   integer not null default 0
+);
+
+create index if not exists winddown_steps_household_idx on public.winddown_steps(household_id);
+
+-- ---------------------------------------------------------------------------
 -- Wearables + Greenlight (hand-entered: Greenlight has no public API)
 -- ---------------------------------------------------------------------------
 
@@ -598,6 +624,9 @@ alter table public.households add column if not exists lon double precision defa
 alter table public.households add column if not exists place text default ''::text;
 alter table public.households add column if not exists preflight_open boolean default true;
 alter table public.households add column if not exists preflight_depart text default '07:30'::text;
+alter table public.households add column if not exists winddown_open boolean default true;
+alter table public.households add column if not exists winddown_bedtime text default '20:30'::text;
+alter table public.households add column if not exists winddown_screens text default '20:00'::text;
 alter table public.households add column if not exists created_at timestamp with time zone default now();
 alter table public.households add column if not exists updated_at timestamp with time zone default now();
 
@@ -654,6 +683,13 @@ alter table public.oauth_tokens add column if not exists scope text;
 alter table public.oauth_tokens add column if not exists config jsonb default '{}'::jsonb;
 alter table public.oauth_tokens add column if not exists created_at timestamp with time zone default now();
 alter table public.oauth_tokens add column if not exists updated_at timestamp with time zone default now();
+
+-- winddown_steps
+alter table public.winddown_steps add column if not exists id text;
+alter table public.winddown_steps add column if not exists household_id text;
+alter table public.winddown_steps add column if not exists text text default ''::text;
+alter table public.winddown_steps add column if not exists by_time text;
+alter table public.winddown_steps add column if not exists sort_order integer default 0;
 
 -- preflight_bring
 alter table public.preflight_bring add column if not exists id text;
@@ -1235,7 +1271,7 @@ declare
   scoped text[] := array[
     'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members', 'chore_log',
     'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists', 'list_items',
-    'countdowns', 'feeds', 'secrets', 'preflight_kids', 'preflight_bring',
+    'countdowns', 'feeds', 'secrets', 'preflight_kids', 'preflight_bring', 'winddown_steps',
     'fit_stats', 'greenlight', 'greenlight_payouts',
     'staples', 'deals', 'savings_status', 'savings_plan'
   ];
@@ -1314,7 +1350,7 @@ declare
     'households', 'members', 'member_links', 'events', 'event_members', 'chores', 'chore_members',
     'chore_log', 'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists',
     'list_items', 'countdowns', 'feeds', 'feed_events', 'secrets', 'preflight_kids',
-    'preflight_bring', 'fit_stats', 'greenlight', 'greenlight_payouts',
+    'preflight_bring', 'winddown_steps', 'fit_stats', 'greenlight', 'greenlight_payouts',
     'staples', 'deals', 'savings_status', 'savings_plan'
   ];
 begin

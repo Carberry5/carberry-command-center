@@ -27,5 +27,5 @@ export default defineConfig({
       '/events': { target: SIDECAR, changeOrigin: true, ws: false },
     },
   },
-  build: { outDir: 'dist', sourcemap: true },
+  build: { outDir: 'dist', sourcemap: true, target: ['chrome87', 'safari14'] },
 })

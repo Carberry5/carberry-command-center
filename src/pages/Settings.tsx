@@ -33,6 +33,16 @@ const smallInput = {
   fontFamily: 'inherit',
 } as const
 
+const timeInput = {
+  border: `1.5px solid ${line(0.16)}`,
+  borderRadius: 10,
+  padding: '7px 10px',
+  font: 'inherit',
+  fontWeight: 700,
+  color: INK,
+  background: '#FCFCFE',
+} as const
+
 const primary = {
   background: INK,
   color: CREAM,
@@ -52,6 +62,7 @@ export function SettingsPage() {
   const [newPin, setNewPin] = useState('')
   const [bringDraft, setBringDraft] = useState<Record<string, string>>({})
   const [linkDraft, setLinkDraft] = useState<Record<string, { label: string; url: string }>>({})
+  const [stepDraft, setStepDraft] = useState('')
 
   const kids = data.members.filter((m) => m.role === 'kid')
 
@@ -471,6 +482,105 @@ export function SettingsPage() {
             </div>
           )
         })}
+      </div>
+
+      {/* Evening wind-down */}
+      <div style={{ ...card, padding: '20px 22px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <h2 style={{ ...HEADING, fontSize: '1.2em' }}>Evening wind-down</h2>
+          <div style={{ flex: 1 }} />
+          <button
+            onClick={() =>
+              update((d) => {
+                d.windDown.open = !d.windDown.open
+              })
+            }
+            style={chip(data.windDown.open)}
+          >
+            {data.windDown.open ? 'Wind-down on' : 'Wind-down off'}
+          </button>
+        </div>
+        <div style={{ color: line(0.58), fontWeight: 600, fontSize: '.85em', margin: '4px 0 6px' }}>
+          Shows on school nights — Sunday through Thursday, the nights before a school day. Appears
+          an hour before screens-off and clears an hour after bedtime.
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0 2px', flexWrap: 'wrap' }}>
+          <div style={{ fontWeight: 700, fontSize: '.9em' }}>Screens off</div>
+          <input
+            type="time"
+            value={data.windDown.screensOff || '20:00'}
+            onChange={(e) =>
+              update((d) => {
+                d.windDown.screensOff = e.target.value || '20:00'
+              })
+            }
+            style={timeInput}
+          />
+          <div style={{ fontWeight: 700, fontSize: '.9em', marginLeft: 8 }}>In bed</div>
+          <input
+            type="time"
+            value={data.windDown.bedtime || '20:30'}
+            onChange={(e) =>
+              update((d) => {
+                d.windDown.bedtime = e.target.value || '20:30'
+              })
+            }
+            style={timeInput}
+          />
+        </div>
+
+        <div style={{ marginTop: 10 }}>
+          <div style={{ fontWeight: 700, fontSize: '.9em', marginBottom: 4 }}>Extra steps</div>
+          <div style={{ color: line(0.58), fontWeight: 600, fontSize: '.8em', marginBottom: 6 }}>
+            Screens off, brush teeth and in bed are always there. These are added in between.
+          </div>
+          {data.windDown.steps.map((st) => (
+            <div key={st.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '5px 0' }}>
+              <div style={{ flex: 1, fontWeight: 700, fontSize: '.88em' }}>{st.text}</div>
+              <button
+                onClick={() =>
+                  update((d) => {
+                    d.windDown.steps = d.windDown.steps.filter((x) => x.id !== st.id)
+                  })
+                }
+                style={{
+                  border: 'none',
+                  background: 'rgba(217,91,67,.12)',
+                  color: '#B23B22',
+                  borderRadius: 10,
+                  padding: '5px 11px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '.78em',
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ))}
+          <div style={{ display: 'flex', gap: 7, marginTop: 5, flexWrap: 'wrap' }}>
+            <input
+              value={stepDraft}
+              onChange={(e) => setStepDraft(e.target.value)}
+              placeholder="Read for 15 minutes"
+              style={{ ...smallInput, flex: 1, minWidth: 180 }}
+            />
+            <button
+              onClick={() => {
+                const text = stepDraft.trim()
+                if (!text) return
+                update((d) => {
+                  d.windDown.steps = [...d.windDown.steps, { id: uid(), text }]
+                })
+                setStepDraft('')
+              }}
+              style={{ ...primary, padding: '6px 12px', fontSize: '.78em' }}
+            >
+              + Step
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Weather */}

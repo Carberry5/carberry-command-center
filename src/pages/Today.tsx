@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { addDays, daysUntil, fmtDate, today } from '../lib/dates.ts'
 import { quoteOfTheWeek } from '../lib/onThisDay.ts'
 import { preflightActive } from '../lib/preflight.ts'
+import { windDownWindow } from '../lib/winddown.ts'
 import { balances, choresFor, eventsOn } from '../lib/selectors.ts'
 import { FAM, GREEN, HEADING, INK, PURPLE_TEXT, cardTight, h2, line, linkBtn } from '../lib/theme.ts'
 import { weatherIcon } from '../lib/weather.ts'
@@ -11,6 +12,7 @@ import { AgendaRow } from '../components/AgendaRow.tsx'
 import { Avatar } from '../components/Avatar.tsx'
 import { Icon, Star } from '../components/Icon.tsx'
 import { PreflightPanel } from '../components/Preflight.tsx'
+import { WindDownPanel } from '../components/WindDown.tsx'
 
 /** The default view: everything the family needs before 8am, in one screen. */
 export function TodayPage() {
@@ -89,6 +91,12 @@ export function TodayPage() {
       </div>
 
       {preflightActive(data.preflight, dow) && kids.length ? <PreflightPanel /> : null}
+      {/*
+        Evening only, and only on a school night. Shown from an hour before
+        screens-off until an hour after bedtime — outside that window a bedtime
+        checklist is clutter on a page that is already dense.
+      */}
+      {windDownWindow(data.windDown, nowDate) && kids.length ? <WindDownPanel /> : null}
 
       <div
         style={{

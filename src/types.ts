@@ -157,6 +157,23 @@ export interface Preflight {
   kids: Record<string, PreflightKid>
 }
 
+/** One step of the evening routine. Built-ins plus whatever the family adds. */
+export interface WindDownStep {
+  id: string
+  text: string
+  /** "HH:MM" this one should be done by, shown as a deadline. */
+  by?: string
+}
+
+export interface WindDown {
+  open: boolean
+  /** "HH:MM" lights out. */
+  bedtime: string
+  /** "HH:MM" screens off — the one with a hard time attached. */
+  screensOff: string
+  steps: WindDownStep[]
+}
+
 export interface WhoopStats {
   kind: 'whoop'
   sleep: number
@@ -257,6 +274,8 @@ export interface FamilyData {
   /** Events pulled from ICS feeds, keyed by feed id. Cache only — not mirrored to the vault. */
   feedEv: Record<string, FamilyEvent[]>
   preflight: Preflight
+  /** The evening counterpart of preflight: screens off, teeth, lights out. */
+  windDown: WindDown
   /** Wearable stats keyed by member id. */
   fit: Record<string, FitStats>
   /** Greenlight cards keyed by kid id. */

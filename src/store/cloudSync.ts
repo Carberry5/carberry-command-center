@@ -15,6 +15,7 @@ import type {
   Savings,
   SecretRef,
   Staple,
+  WindDown,
 } from '../types.ts'
 import { isStoreId } from '../lib/savings.ts'
 
@@ -66,6 +67,7 @@ export interface TableRows {
   secrets: Row[]
   preflight_kids: Row[]
   preflight_bring: Row[]
+  winddown_steps: Row[]
   fit_stats: Row[]
   greenlight: Row[]
   greenlight_payouts: Row[]
@@ -104,6 +106,7 @@ export const PRIMARY_KEYS: Record<TableName, string[]> = {
   secrets: ['id'],
   preflight_kids: ['household_id', 'member_id'],
   preflight_bring: ['id'],
+  winddown_steps: ['id'],
   fit_stats: ['household_id', 'member_id'],
   greenlight: ['household_id', 'member_id'],
   greenlight_payouts: ['id'],
@@ -137,6 +140,7 @@ export const WRITE_ORDER: TableName[] = [
   'secrets',
   'preflight_kids',
   'preflight_bring',
+  'winddown_steps',
   'fit_stats',
   'greenlight',
   'greenlight_payouts',
@@ -151,7 +155,7 @@ function emptyRows(): TableRows {
     households: [], members: [], member_links: [], events: [], event_members: [], chores: [],
     chore_members: [], chore_log: [], rewards: [], redemptions: [], favorites: [],
     meal_plan: [], lists: [], list_items: [], countdowns: [], feeds: [],
-    secrets: [], preflight_kids: [], preflight_bring: [], fit_stats: [],
+    secrets: [], preflight_kids: [], preflight_bring: [], winddown_steps: [], fit_stats: [],
     greenlight: [], greenlight_payouts: [],
     staples: [], deals: [], savings_status: [], savings_plan: [],
   }
@@ -174,6 +178,15 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
     place: data.settings.place,
     preflight_open: data.preflight.open,
     preflight_depart: data.preflight.depart ?? '07:30',
+    winddown_open: data.windDown?.open ?? true,
+    winddown_bedtime: data.windDown?.bedtime ?? '20:30',
+    winddown_screens: data.windDown?.screensOff ?? '20:00',
+  })
+
+  ;(data.windDown?.steps ?? []).forEach((st, i) => {
+    rows.winddown_steps.push({
+      id: st.id, household_id: hh, text: st.text, by_time: st.by ?? null, sort_order: i,
+    })
   })
 
   data.members.forEach((m, i) => {
@@ -538,6 +551,17 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     }
   })
 
+  const windDown: WindDown = {
+    open: hh.winddown_open !== false,
+    bedtime: str(hh.winddown_bedtime, '20:30'),
+    screensOff: str(hh.winddown_screens, '20:00'),
+    steps: [...rows.winddown_steps].sort(bySort).map((r) => ({
+      id: str(r.id),
+      text: str(r.text),
+      ...(r.by_time == null ? {} : { by: str(r.by_time) }),
+    })),
+  }
+
   const fit: Record<string, FitStats> = {}
   rows.fit_stats.forEach((r) => {
     const mid = str(r.member_id)
@@ -645,6 +669,7 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     },
     feedEv,
     preflight,
+    windDown,
     fit,
     gl,
     secrets,
