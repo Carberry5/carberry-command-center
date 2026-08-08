@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import type { PreflightKid } from '../types.ts'
 import { uid } from '../lib/dates.ts'
 import { kidConfig } from '../lib/preflight.ts'
+import { fileToSquareDataUrl } from '../lib/photo.ts'
+import { avatarInitial, avatarStyle } from '../lib/selectors.ts'
 import { geocode } from '../lib/weather.ts'
 import {
   CREAM,
@@ -124,8 +126,14 @@ export function SettingsPage() {
               flexWrap: 'wrap',
             }}
           >
-            <div
-              style={{
+            {/*
+              The avatar doubles as the photo picker. A separate "upload" button
+              would be one more thing on an already busy row, and tapping the
+              face you want to change is where a person looks first.
+            */}
+            <label
+              title={m.photo ? `Change ${m.name}'s photo` : `Add a photo for ${m.name}`}
+              style={avatarStyle(m, {
                 width: 34,
                 height: 34,
                 borderRadius: '50%',
@@ -135,11 +143,57 @@ export function SettingsPage() {
                 color: CREAM,
                 fontFamily: "'Outfit', sans-serif",
                 fontWeight: 600,
-                background: m.color,
-              }}
+                cursor: 'pointer',
+                flexShrink: 0,
+              })}
             >
-              {m.name[0] ?? '?'}
-            </div>
+              {avatarInitial(m)}
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: 'none' }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  // Reset first: picking the same file twice in a row fires no
+                  // change event otherwise, which reads as the button being dead.
+                  e.target.value = ''
+                  if (!file) return
+                  try {
+                    const dataUrl = await fileToSquareDataUrl(file)
+                    update((d) => {
+                      const t = d.members.find((x) => x.id === m.id)
+                      if (t) t.photo = dataUrl
+                    })
+                    toast(`${m.name}'s photo updated`)
+                  } catch (err) {
+                    toast(err instanceof Error ? err.message : 'Could not read that image')
+                  }
+                }}
+              />
+            </label>
+            {m.photo ? (
+              <button
+                onClick={() =>
+                  update((d) => {
+                    const t = d.members.find((x) => x.id === m.id)
+                    if (t) delete t.photo
+                  })
+                }
+                title={`Remove ${m.name}'s photo`}
+                style={{
+                  border: 'none',
+                  background: 'rgba(35,42,61,.07)',
+                  borderRadius: 8,
+                  padding: '4px 7px',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  fontSize: '.7em',
+                  color: line(0.6),
+                }}
+              >
+                Clear
+              </button>
+            ) : null}
             <input
               value={m.name}
               onChange={(e) =>
