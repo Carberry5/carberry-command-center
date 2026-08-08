@@ -17,7 +17,8 @@
     "test:seed": "tsx scripts/seed-test.ts",
     "test:gtasks": "tsx scripts/gtasks-test.ts",
     "test:winddown": "tsx scripts/winddown-test.ts",
-    "test:launches": "tsx scripts/launches-test.ts"
+    "test:launches": "tsx scripts/launches-test.ts",
+    "test:upcoming": "tsx scripts/upcoming-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
