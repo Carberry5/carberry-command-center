@@ -2,7 +2,7 @@ import { daysUntil, fmtTime, today } from '../lib/dates.ts'
 import { kidConfig, preflightActive, preflightRows } from '../lib/preflight.ts'
 import { minutesUntil, windDownRows, windDownWindow } from '../lib/winddown.ts'
 import { balances, eventColor, eventsOn, isDone } from '../lib/selectors.ts'
-import { CREAM, HEADING } from '../lib/theme.ts'
+import { CHECK, HEADING, INK, TAUPE, line } from '../lib/theme.ts'
 import { weatherIcon } from '../lib/weather.ts'
 import { useFamily } from '../store/FamilyStore.tsx'
 import { Avatar } from '../components/Avatar.tsx'
@@ -19,6 +19,10 @@ import { Star } from '../components/Icon.tsx'
  * The layout is height-first. Everything is sized from the viewport rather than
  * from content, and each column clips its own overflow, because on a display
  * nobody is scrolling a truncated list is honest and a scrollbar is not.
+ *
+ * Light, not dark, as of the elizabethcarberry.com restyle: the wall display
+ * was the last dark surface in the app, and the Skylight products this mimics
+ * are themselves light — warm ground, solid per-kid colour blocks.
  */
 export function DisplayPage() {
   const { data, wx, now, prefs, setPrefs, mode } = useFamily()
@@ -78,8 +82,8 @@ export function DisplayPage() {
         position: 'fixed',
         inset: 0,
         overflow: 'hidden',
-        background: 'linear-gradient(140deg,#1B2136,#232A3D 55%,#2C3550)',
-        color: CREAM,
+        background: '#FAF8F4',
+        color: INK,
         fontFamily: "'Plus Jakarta Sans', sans-serif",
         display: 'flex',
         flexDirection: 'column',
@@ -94,7 +98,7 @@ export function DisplayPage() {
         <div
           style={{
             ...HEADING,
-            color: CREAM,
+            color: INK,
             fontSize: 'clamp(34px, 8.5vh, 92px)',
             lineHeight: 1,
             letterSpacing: '-.02em',
@@ -124,7 +128,7 @@ export function DisplayPage() {
         {prefs.showWeather && dayWx ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
             <span style={{ fontSize: 'clamp(20px, 4.4vh, 44px)' }}>{weatherIcon(dayWx.c)}</span>
-            <span style={{ ...HEADING, color: CREAM, fontSize: 'clamp(18px, 4vh, 40px)' }}>
+            <span style={{ ...HEADING, color: INK, fontSize: 'clamp(18px, 4vh, 40px)' }}>
               {Math.round(dayWx.hi)}°
             </span>
             <span style={{ fontWeight: 700, fontSize: 'clamp(11px, 2.2vh, 20px)', opacity: 0.55 }}>
@@ -140,7 +144,8 @@ export function DisplayPage() {
               fontWeight: 800,
               fontSize: 'clamp(10px,1.7vh,16px)',
               letterSpacing: '.08em',
-              background: 'rgba(217,91,67,.3)',
+              color: '#B23B22',
+              background: 'rgba(217,91,67,.14)',
               padding: '4px 9px',
               borderRadius: 999,
             }}
@@ -166,11 +171,16 @@ export function DisplayPage() {
               <div
                 key={e.id}
                 style={{
+                  // The same solid block the calendar uses — one visual
+                  // language for "an event", at wall scale.
                   display: 'flex',
                   alignItems: 'baseline',
                   gap: 'clamp(6px,1vw,14px)',
-                  padding: 'clamp(3px,.7vh,8px) 0',
-                  borderBottom: `1px solid rgba(255,255,255,.07)`,
+                  padding: 'clamp(4px,.8vh,9px) clamp(8px,.9vw,14px)',
+                  marginBottom: 'clamp(3px,.6vh,7px)',
+                  borderRadius: 12,
+                  background: eventColor(data, e) ?? '#5B8DEF',
+                  color: '#FFFFFF',
                 }}
               >
                 <span
@@ -182,20 +192,11 @@ export function DisplayPage() {
                     // "10:30 AM" wrapped to two lines once the type scaled up,
                     // which pushed the row height out and cost a whole event.
                     whiteSpace: 'nowrap',
-                    opacity: 0.68,
+                    opacity: 0.85,
                   }}
                 >
                   {fmtTime(e.start)}
                 </span>
-                <span
-                  style={{
-                    width: 5,
-                    alignSelf: 'stretch',
-                    flexShrink: 0,
-                    borderRadius: 3,
-                    background: eventColor(data, e) ?? '#5B8DEF',
-                  }}
-                />
                 <span
                   style={{
                     flex: 1,
@@ -262,7 +263,7 @@ export function DisplayPage() {
                           style={{
                             fontWeight: 800,
                             fontSize: 'clamp(13px,2.9vh,28px)',
-                            color: settled ? '#4ADE80' : toBed < 0 ? '#F87171' : CREAM,
+                            color: settled ? CHECK : toBed < 0 ? '#D9435B' : INK,
                             opacity: settled ? 1 : 0.8,
                           }}
                         >
@@ -279,7 +280,7 @@ export function DisplayPage() {
                           style={{
                             fontWeight: 800,
                             fontSize: 'clamp(13px,2.9vh,28px)',
-                            color: ready ? '#4ADE80' : CREAM,
+                            color: ready ? CHECK : INK,
                             opacity: ready ? 1 : 0.75,
                           }}
                         >
@@ -317,13 +318,14 @@ export function DisplayPage() {
                   style={{
                     flex: 1,
                     minWidth: 0,
-                    background: 'rgba(255,255,255,.07)',
+                    background: '#FFFFFF',
+                    border: `1px solid ${line(0.1)}`,
                     borderRadius: 14,
                     padding: 'clamp(5px,1vh,12px) clamp(6px,.8vw,14px)',
                     textAlign: 'center',
                   }}
                 >
-                  <div style={{ ...HEADING, color: CREAM, fontSize: 'clamp(16px,3.2vh,32px)', lineHeight: 1 }}>
+                  <div style={{ ...HEADING, color: INK, fontSize: 'clamp(16px,3.2vh,32px)', lineHeight: 1 }}>
                     {c.days}
                   </div>
                   <div
@@ -361,8 +363,8 @@ export function DisplayPage() {
           borderRadius: 17,
           border: 'none',
           background: 'transparent',
-          color: CREAM,
-          opacity: 0.18,
+          color: INK,
+          opacity: 0.25,
           cursor: 'pointer',
           fontSize: 15,
           lineHeight: 1,
@@ -378,8 +380,9 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
   return (
     <div
       style={{
-        background: 'rgba(255,255,255,.055)',
-        border: `1px solid rgba(255,255,255,.09)`,
+        background: '#FFFFFF',
+        border: `1px solid ${line(0.1)}`,
+        boxShadow: '0 8px 24px -18px rgba(46,42,38,.25)',
         borderRadius: 18,
         padding: 'clamp(8px,1.5vh,18px) clamp(10px,1.2vw,20px)',
         minHeight: 0,
@@ -393,10 +396,10 @@ function Panel({ title, children }: { title: string; children: React.ReactNode }
       <div
         style={{
           fontWeight: 800,
-          letterSpacing: '.09em',
+          letterSpacing: '.14em',
           textTransform: 'uppercase',
           fontSize: 'clamp(10px,1.7vh,16px)',
-          opacity: 0.5,
+          color: TAUPE,
           marginBottom: 'clamp(3px,.7vh,8px)',
           flexShrink: 0,
         }}
