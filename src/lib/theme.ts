@@ -2,13 +2,15 @@ import type { CSSProperties } from 'react'
 
 /** Palette and reusable style builders, lifted verbatim from the design. */
 
-export const INK = '#232A3D'
-export const CREAM = '#F7F9FF'
+// Warm charcoal, not navy. elizabethcarberry.com's ink is a soft near-black
+// with no blue in it; the whole warmth of that site follows from the neutrals.
+export const INK = '#2E2A26'
+export const CREAM = '#FBF9F6'
 /** The whole-family purple, used when no single member owns something. */
 export const FAM = '#8A63C9'
-// Lightened from #F4F6FB: the Skylight brightness Elizabeth likes comes as
-// much from an airy near-white ground as from the colour blocks on it.
-export const BG = '#F8FAFE'
+// Warm off-white — the airy Skylight brightness at elizabethcarberry.com's
+// temperature. The old ground was the same lightness but cool blue.
+export const BG = '#FAF8F4'
 export const BLUE = '#3D6DE8'
 export const BLUE_DARK = '#2A4FB8'
 export const PURPLE = '#7C5CE0'
@@ -20,10 +22,30 @@ export const DANGER = '#B23B22'
 export const ALERT = '#D9435B'
 export const AMBER = '#E2924A'
 export const AMBER_TEXT = '#8A5A1E'
+/** The site's greige — display headings and quiet labels. */
+export const TAUPE = '#A79582'
 
-export const line = (a: number) => `rgba(35,42,61,${a})`
+export const line = (a: number) => `rgba(46,42,38,${a})`
 
-export const HEADING: CSSProperties = { fontFamily: "'Outfit', sans-serif", fontWeight: 600, margin: 0 }
+/**
+ * Display type is now the serif from elizabethcarberry.com's headings —
+ * Cormorant Garamond is the closest freely-hostable cut. It runs visually
+ * smaller than a sans at the same em size, hence the slight bump.
+ */
+export const HEADING: CSSProperties = {
+  fontFamily: "'Cormorant Garamond', Georgia, serif",
+  fontWeight: 600,
+  letterSpacing: '.01em',
+  margin: 0,
+}
+
+/** Tracked-out caps label — the "WE BELIEVE…" treatment, for page titles. */
+export const DISPLAY_CAPS: CSSProperties = {
+  ...HEADING,
+  textTransform: 'uppercase',
+  letterSpacing: '.14em',
+  fontWeight: 600,
+}
 
 /** The standard white card. */
 export const card: CSSProperties = {
