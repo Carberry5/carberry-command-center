@@ -107,9 +107,9 @@ export function Rail() {
             <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
               <span
                 style={{
-                  fontFamily: "'Outfit', sans-serif",
+                  fontFamily: "'Cormorant Garamond', Georgia, serif",
                   fontWeight: 600,
-                  fontSize: '1.16em',
+                  fontSize: '1.3em',
                   lineHeight: 1.05,
                 }}
               >

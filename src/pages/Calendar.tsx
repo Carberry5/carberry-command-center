@@ -176,11 +176,18 @@ export function CalendarPage() {
                         key={`${e.id}-${ds}`}
                         onClick={() => editEvent(e)}
                         style={{
+                          // Solid colour, white text — the Skylight look. The
+                          // previous 8% tint made every kid's events read as
+                          // roughly the same pale grey from across a kitchen;
+                          // whose day it is should be legible at a glance from
+                          // colour alone. Every palette colour is dark enough
+                          // to carry white text.
                           borderRadius: 12,
                           padding: '8px 10px',
                           cursor: 'pointer',
-                          background: `${color}14`,
-                          borderLeft: `4px solid ${color}`,
+                          background: color,
+                          color: '#FFFFFF',
+                          boxShadow: `0 3px 10px -6px ${color}`,
                         }}
                       >
                         <div
@@ -190,21 +197,33 @@ export function CalendarPage() {
                             gap: 5,
                             fontWeight: 700,
                             fontSize: '.72em',
-                            color: line(0.6),
+                            opacity: 0.9,
                           }}
                         >
                           <span>{fmtTime(e.start)}</span>
                           <span style={{ flex: 1 }} />
-                          {(e.feedColor ? [e.feedColor] : memberDots(data, e.memberIds)).map((c, i) => (
-                            <span
-                              key={`${c}-${i}`}
-                              style={{ width: 9, height: 9, borderRadius: '50%', display: 'inline-block', background: c }}
-                            />
-                          ))}
+                          {/* Only worth showing when the event is shared: on a
+                              solid block, a lone dot in the same colour is
+                              invisible and says nothing. */}
+                          {(e.feedColor ? [] : memberDots(data, e.memberIds)).length > 1
+                            ? memberDots(data, e.memberIds).map((c, i) => (
+                                <span
+                                  key={`${c}-${i}`}
+                                  style={{
+                                    width: 9,
+                                    height: 9,
+                                    borderRadius: '50%',
+                                    display: 'inline-block',
+                                    background: c,
+                                    boxShadow: '0 0 0 1.5px rgba(255,255,255,.9)',
+                                  }}
+                                />
+                              ))
+                            : null}
                         </div>
                         <div style={{ fontWeight: 700, fontSize: '.86em', lineHeight: 1.25, marginTop: 2 }}>{e.title}</div>
                         {e.loc ? (
-                          <div style={{ fontWeight: 600, fontSize: '.72em', color: line(0.5) }}>{e.loc}</div>
+                          <div style={{ fontWeight: 600, fontSize: '.72em', opacity: 0.8 }}>{e.loc}</div>
                         ) : null}
                         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 3 }}>
                           <RideTags data={data} event={e} iconSize={11} />
@@ -288,15 +307,14 @@ export function CalendarPage() {
                         style={{
                           fontWeight: 700,
                           fontSize: '.68em',
-                          borderRadius: 6,
+                          borderRadius: 7,
                           padding: '2px 6px',
                           marginBottom: 2,
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          color: INK,
-                          background: `${color}22`,
-                          borderLeft: `3px solid ${color}`,
+                          color: '#FFFFFF',
+                          background: color,
                         }}
                       >
                         {e.title}

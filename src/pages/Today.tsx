@@ -50,7 +50,7 @@ export function TodayPage() {
       {/* Hero */}
       <div
         style={{
-          background: 'linear-gradient(120deg,#FFFFFF,#E4EBFC)',
+          background: 'linear-gradient(120deg,#FFFFFF,#EFE9E1)',
           border: `1px solid ${line(0.1)}`,
           borderRadius: 24,
           boxShadow: '0 10px 30px -22px rgba(35,42,61,.35)',

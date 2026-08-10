@@ -56,7 +56,7 @@ export function App() {
         minHeight: '100vh',
         display: 'flex',
         alignItems: 'stretch',
-        fontFamily: "'Plus Jakarta Sans', sans-serif",
+        fontFamily: "'Jost', 'Plus Jakarta Sans', sans-serif",
         color: INK,
         background: BG,
         fontSize: rootFontSize,

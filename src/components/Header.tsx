@@ -1,6 +1,6 @@
 import { memberById } from '../lib/selectors.ts'
 import { today } from '../lib/dates.ts'
-import { CHECK, HEADING, INK, line } from '../lib/theme.ts'
+import { CHECK, DISPLAY_CAPS, INK, TAUPE, line } from '../lib/theme.ts'
 import { weatherIcon } from '../lib/weather.ts'
 import { useFamily, useLayout } from '../store/FamilyStore.tsx'
 import { useModals } from '../store/ModalStore.tsx'
@@ -58,7 +58,8 @@ export function Header() {
       }}
     >
       <div>
-        <h1 style={{ ...HEADING, fontSize: '1.7em', letterSpacing: '.2px' }}>{title}</h1>
+        {/* The "WE BELIEVE…" treatment: tracked serif capitals in greige. */}
+        <h1 style={{ ...DISPLAY_CAPS, fontSize: '1.55em', color: TAUPE }}>{title}</h1>
         <div style={{ color: line(0.58), fontWeight: 600, fontSize: '.85em', marginTop: 2 }}>
           {nowDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </div>
