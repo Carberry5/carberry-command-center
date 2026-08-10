@@ -146,7 +146,10 @@ export function FamilyStoreProvider({ children }: { children: ReactNode }) {
   const [pinPrompt, setPinPrompt] = useState<PinPrompt | null>(null)
   const [pinEntry, setPinEntry] = useState('')
   const [pinShake, setPinShake] = useState(0)
-  const [page, setPage] = useState<PageId>('today')
+  // The calendar is the front door. Elizabeth's feedback, and she is the
+  // household's scheduler: the calendar is the primary interface, everything
+  // else is supporting material. Today remains one tap away on the rail.
+  const [page, setPage] = useState<PageId>('calendar')
   const [memberSel, setMemberSel] = useState<string | null>(null)
   const [wx, setWx] = useState<Weather | null>(null)
   const [history, setHistory] = useState<HistoryFact[] | null>(null)

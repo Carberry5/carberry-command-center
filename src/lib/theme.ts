@@ -6,7 +6,9 @@ export const INK = '#232A3D'
 export const CREAM = '#F7F9FF'
 /** The whole-family purple, used when no single member owns something. */
 export const FAM = '#8A63C9'
-export const BG = '#F4F6FB'
+// Lightened from #F4F6FB: the Skylight brightness Elizabeth likes comes as
+// much from an airy near-white ground as from the colour blocks on it.
+export const BG = '#F8FAFE'
 export const BLUE = '#3D6DE8'
 export const BLUE_DARK = '#2A4FB8'
 export const PURPLE = '#7C5CE0'
