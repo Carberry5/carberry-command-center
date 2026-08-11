@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, type CSSProperties } from 'react'
 import { DOW_NAMES, addDays, fmtTime, parseDay, today, ymd } from '../lib/dates.ts'
 import { eventColor, eventsOn, memberDots } from '../lib/selectors.ts'
-import { CREAM, FAM, GREEN, INK, chip, line, primaryBtn } from '../lib/theme.ts'
+import { CREAM, FAM, GREEN, INK, line, primaryBtn } from '../lib/theme.ts'
 import { useFamily } from '../store/FamilyStore.tsx'
 import { useModals } from '../store/ModalStore.tsx'
+import { Avatar } from '../components/Avatar.tsx'
 import { RideTags } from '../components/RideTags.tsx'
 
 /** Week and month views, colour-coded by who each event belongs to. */
@@ -54,6 +55,20 @@ export function CalendarPage() {
     color: INK,
   } as const
 
+  /**
+   * How a face reads in the filter row.
+   *
+   * With no filter set nobody is dimmed — "everyone" is the resting state of
+   * the calendar, not a selection, so dimming five of six faces by default
+   * would be a lie about what's on screen. Once somebody is picked, the ones
+   * left out step back and the picked ones wear a ring in their own colour.
+   */
+  const faceState = (on: boolean, color: string): CSSProperties => ({
+    transition: 'opacity .15s ease, box-shadow .15s ease',
+    opacity: !filter || on ? 1 : 0.34,
+    boxShadow: on ? `0 0 0 2px ${CREAM}, 0 0 0 4px ${color}` : 'none',
+  })
+
   const viewBtn = (on: boolean) => ({
     border: 'none',
     borderRadius: 999,
@@ -67,7 +82,11 @@ export function CalendarPage() {
   })
 
   return (
-    <section style={{ animation: 'fadeUp .35s ease both' }}>
+    // The calendar owns the height it is given rather than sizing to its
+    // contents: a week of mostly-empty days used to be a strip of short cards
+    // with dead space under them. App.tsx makes the page area a flex column
+    // for this.
+    <section style={{ animation: 'fadeUp .35s ease both', flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
         <div style={{ display: 'flex', background: 'rgba(35,42,61,.07)', borderRadius: 999, padding: 4 }}>
           <button onClick={() => setView('week')} style={viewBtn(view === 'week')}>
@@ -112,16 +131,41 @@ export function CalendarPage() {
         </div>
         <div style={{ flex: 1 }} />
 
-        <button onClick={() => setFilter(null)} style={chip(!filter)}>
-          <span style={{ width: 10, height: 10, borderRadius: '50%', display: 'inline-block', background: FAM }} />
-          Everyone
-        </button>
-        {data.members.map((m) => (
-          <button key={m.id} onClick={() => toggleFilter(m.id)} style={chip(!!filter?.includes(m.id))}>
-            <span style={{ width: 10, height: 10, borderRadius: '50%', display: 'inline-block', background: m.color }} />
-            {m.name}
+        {/* Faces, not names. Six name chips wrapped the toolbar onto a second
+            line and cost a row of calendar; the photos are both narrower and
+            the thing this family actually recognises at a glance. */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            onClick={() => setFilter(null)}
+            title="Everyone"
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: '50%',
+              border: 'none',
+              padding: 0,
+              cursor: 'pointer',
+              background: FAM,
+              color: '#FFFFFF',
+              fontFamily: "'Outfit', sans-serif",
+              fontWeight: 600,
+              fontSize: '.72em',
+              ...faceState(!filter, FAM),
+            }}
+          >
+            All
           </button>
-        ))}
+          {data.members.map((m) => (
+            <Avatar
+              key={m.id}
+              member={m}
+              size={38}
+              onClick={() => toggleFilter(m.id)}
+              title={filter?.includes(m.id) ? `Hide ${m.name}` : `Show only ${m.name}`}
+              style={faceState(!!filter?.includes(m.id), m.color)}
+            />
+          ))}
+        </div>
         <button onClick={() => newEvent(td)} style={primaryBtn}>
           + Add event
         </button>
@@ -130,7 +174,19 @@ export function CalendarPage() {
       {view === 'week' ? (
         <div
           className="scroll-x"
-          style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(148px,1fr))', gap: 10, paddingBottom: 6 }}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(7,minmax(148px,1fr))',
+            // One row, told to take the whole track. Without this the row is
+            // auto-sized to the busiest day and the rest of the space is lost.
+            gridAutoRows: '1fr',
+            gap: 10,
+            paddingBottom: 6,
+            flex: 1,
+            // A floor for the phone, where the column is inside a scrolling
+            // page and there is no spare height to hand out.
+            minHeight: 420,
+          }}
         >
           {Array.from({ length: 7 }, (_, i) => addDays(w0, i)).map((ds) => {
             const isToday = ds === td
@@ -145,6 +201,10 @@ export function CalendarPage() {
                   borderRadius: 18,
                   display: 'flex',
                   flexDirection: 'column',
+                  // The card is now taller than its contents, so the corners
+                  // have to clip the scroll area rather than the other way round.
+                  overflow: 'hidden',
+                  minHeight: 0,
                   border: `1.5px solid ${isToday ? INK : line(0.1)}`,
                 }}
               >
@@ -168,7 +228,19 @@ export function CalendarPage() {
                   <DayHiLo ds={ds} />
                 </div>
 
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 7, padding: '0 9px 10px', minHeight: 130 }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 7,
+                    padding: '0 9px 10px',
+                    // Fills the card; a day with more events than fit scrolls
+                    // on its own instead of stretching the whole week.
+                    flex: 1,
+                    minHeight: 0,
+                    overflowY: 'auto',
+                  }}
+                >
                   {events.map((e) => {
                     const color = eventColor(data, e)
                     return (
@@ -259,7 +331,17 @@ export function CalendarPage() {
               </div>
             ))}
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,1fr)', gap: 6 }}>
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7,1fr)',
+              gridAutoRows: 'minmax(92px,1fr)',
+              gap: 6,
+              flex: 1,
+              minHeight: 0,
+              paddingBottom: 6,
+            }}
+          >
             {Array.from({ length: 42 }, (_, i) => addDays(gridStart, i)).map((ds) => {
               const d = parseDay(ds)
               const inMonth = d.getMonth() === monthBase.getMonth()

@@ -53,7 +53,16 @@ export function App() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        // On a desktop or a wall display the shell is pinned to the viewport
+        // and `main` does the scrolling, so a page asking for the leftover
+        // height gets a real number instead of stretching the window: a
+        // content-sized shell resolves `flex: 1` against the page's own
+        // max-content, which pushed the month grid off the bottom.
+        //
+        // Phones keep the document scrolling the way they always have — 100vh
+        // there is a lie told by a collapsing URL bar, and the bottom tab rail
+        // is already fixed.
+        ...(narrow ? { minHeight: '100vh' } : { height: '100vh', overflow: 'hidden' }),
         display: 'flex',
         alignItems: 'stretch',
         fontFamily: "'Jost', 'Plus Jakarta Sans', sans-serif",
@@ -63,14 +72,30 @@ export function App() {
       }}
     >
       <Rail />
-      <main style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+      <main
+        style={{
+          flex: 1,
+          minWidth: 0,
+          display: 'flex',
+          flexDirection: 'column',
+          ...(narrow ? {} : { overflowY: 'auto', overflowX: 'hidden' }),
+        }}
+      >
         <Header />
         <div
           style={{
-            padding: narrow ? '4px 16px 110px' : '6px 30px 44px',
+            padding: narrow ? '4px 16px 110px' : '6px 30px 24px',
             maxWidth: 1560,
             width: '100%',
             margin: '0 auto',
+            // A flex column so a page can ask for the leftover height instead
+            // of stopping at its content — the calendar's day cards run to the
+            // bottom of the window this way. Pages that don't opt in are
+            // unaffected: a lone flex item with basis:auto keeps its own size.
+            flex: 1,
+            minHeight: 0,
+            display: 'flex',
+            flexDirection: 'column',
           }}
         >
           <Page />
