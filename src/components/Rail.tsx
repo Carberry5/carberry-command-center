@@ -18,10 +18,17 @@ const PAGES: [PageId, string][] = [
   ['settings', 'Settings'],
 ]
 
-/** Skylight-style navigation: a sidebar rail that becomes bottom tabs on a phone. */
+/**
+ * Skylight-style navigation: a sidebar rail that becomes bottom tabs on a phone.
+ *
+ * The desktop rail is deliberately narrow — icon with its label underneath, one
+ * column of glyphs, no wordmark. The wide version spent 236px on nine words
+ * that the icons already say, and that width comes straight off the calendar,
+ * which is the screen this app is for.
+ */
 export function Rail() {
   const { data, page, go, openMember } = useFamily()
-  const { narrow, mid } = useLayout()
+  const { narrow } = useLayout()
 
   const railStyle: CSSProperties = narrow
     ? {
@@ -39,14 +46,16 @@ export function Rail() {
         boxShadow: '0 -8px 24px -14px rgba(35,42,61,.3)',
       }
     : {
-        width: mid ? 86 : 236,
+        width: 82,
         flexShrink: 0,
         display: 'flex',
         flexDirection: 'column',
-        gap: 5,
-        padding: '20px 14px',
+        gap: 3,
+        padding: '16px 7px 12px',
         borderRight: `1px solid ${line(0.1)}`,
-        background: 'rgba(255,255,255,.65)',
+        // A faint warm wash rather than flat white, so the selected item —
+        // which is white — reads as lifted off the rail.
+        background: 'linear-gradient(180deg, rgba(255,255,255,.72), rgba(46,42,38,.05))',
         position: 'sticky',
         top: 0,
         height: '100vh',
@@ -72,70 +81,42 @@ export function Rail() {
         }
       : {
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
-          gap: 12,
-          padding: '12px 14px',
-          borderRadius: 16,
-          border: 'none',
+          justifyContent: 'center',
+          gap: 4,
+          padding: '9px 2px',
+          borderRadius: 14,
           cursor: 'pointer',
-          fontSize: '.93em',
+          fontSize: '.58em',
           fontWeight: 700,
-          textAlign: 'left',
-          minHeight: 47,
+          lineHeight: 1.15,
+          textAlign: 'center',
           width: '100%',
-          ...(mid ? { justifyContent: 'center' } : {}),
-          background: on ? INK : 'none',
-          color: on ? CREAM : line(0.7),
+          // Selected is a white card, not an ink slab: at this width a filled
+          // dark block is the loudest thing on the screen, and the calendar
+          // beside it should be.
+          background: on ? '#FFFFFF' : 'none',
+          color: on ? INK : line(0.55),
+          border: `1px solid ${on ? line(0.08) : 'transparent'}`,
+          boxShadow: on ? '0 4px 14px -9px rgba(46,42,38,.7)' : 'none',
         }
 
   return (
     <nav style={railStyle}>
       {!narrow ? (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            padding: '6px 8px 18px',
-            ...(mid ? { justifyContent: 'center' } : {}),
-          }}
-        >
-          <Logo size={40} style={{ flexShrink: 0 }} />
-          {!mid ? (
-            // A lockup, not a wrapped sentence: the name reads as the brand and
-            // the descriptor sits under it, so two lines look chosen.
-            <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
-              <span
-                style={{
-                  fontFamily: "'Cormorant Garamond', Georgia, serif",
-                  fontWeight: 600,
-                  fontSize: '1.3em',
-                  lineHeight: 1.05,
-                }}
-              >
-                Carberry
-              </span>
-              <span
-                style={{
-                  fontSize: '.62em',
-                  fontWeight: 800,
-                  letterSpacing: '.1em',
-                  textTransform: 'uppercase',
-                  color: line(0.45),
-                  lineHeight: 1.1,
-                }}
-              >
-                Command Center
-              </span>
-            </span>
-          ) : null}
+        // The mark alone. The wordmark needs ~150px to sit on one line and the
+        // header already titles every page; the logo is enough to say whose
+        // house this is.
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '4px 0 14px' }}>
+          <Logo size={38} style={{ flexShrink: 0 }} />
         </div>
       ) : null}
 
       {PAGES.map(([id, label]) => (
-        <button key={id} onClick={() => go(id)} style={buttonStyle(page === id)}>
-          <Icon d={NAV_ICONS[id]} size={23} style={{ flexShrink: 0 }} />
-          {narrow || !mid ? <span>{label}</span> : null}
+        <button key={id} onClick={() => go(id)} style={buttonStyle(page === id)} title={label}>
+          <Icon d={NAV_ICONS[id]} size={narrow ? 23 : 21} style={{ flexShrink: 0 }} />
+          <span>{label}</span>
         </button>
       ))}
 
@@ -143,15 +124,15 @@ export function Rail() {
         <div
           style={{
             display: 'flex',
-            gap: 6,
+            gap: 5,
             flexWrap: 'wrap',
+            justifyContent: 'center',
             marginTop: 'auto',
-            padding: '14px 6px 4px',
-            ...(mid ? { justifyContent: 'center' } : {}),
+            padding: '14px 2px 2px',
           }}
         >
           {data.members.map((m) => (
-            <Avatar key={m.id} member={m} size={30} fontSize={13} onClick={() => openMember(m.id)} />
+            <Avatar key={m.id} member={m} size={28} fontSize={12} onClick={() => openMember(m.id)} />
           ))}
         </div>
       ) : null}
