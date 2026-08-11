@@ -110,6 +110,9 @@ async function main() {
 
   console.log(`${feeds.length} feed(s)${DRY_RUN ? ' — dry run, nothing will be written' : ''}\n`)
   let failures = 0
+  // Only feeds actually fetched — skipped ones are neither a success nor a
+  // failure, and counting them would hide a total outage behind a 1Password ref.
+  let attempted = 0
 
   for (const feed of feeds as FeedRow[]) {
     const label = `${feed.household_id}/${feed.name || feed.id}`
@@ -125,6 +128,7 @@ async function main() {
     // Launch Library 2 API. Handled here rather than as a separate job so it
     // inherits member tagging, the calendar merge and the status line.
     if (isLaunchFeed(feed.url)) {
+      attempted++
       try {
         // 90 seconds, and one retry. Launch Library 2 is a free community API
         // and a cold query regularly takes most of a minute — the first live
@@ -154,6 +158,7 @@ async function main() {
       continue
     }
 
+    attempted++
     try {
       const res = await fetch(url, {
         headers: { accept: 'text/calendar,text/plain,*/*' },
@@ -177,14 +182,33 @@ async function main() {
     }
   }
 
-  if (failures) {
-    console.log(`\n${failures} feed(s) failed`)
-    // A feed that 404s is the family's problem to fix, not a broken job — but
-    // it should still be visible as a red run rather than passing quietly.
-    process.exitCode = 1
-  } else {
+  if (!failures) {
     console.log('\nall feeds synced')
+    return
   }
+
+  console.log(`\n${failures} of ${attempted} feed(s) failed`)
+
+  // Who this failure belongs to decides whether the run goes red.
+  //
+  // One dead feed is the family's problem, not the job's. A school calendar
+  // that 404s will 404 again in three hours and every three hours after that,
+  // and failing the run for it emails the household eight times a day about
+  // something the app already says in plain words — setStatus wrote "Sync
+  // failed: responded 404" onto the feed, and Settings shows it. A red run
+  // adds nothing but noise, and noise is how a genuinely broken sync gets
+  // ignored.
+  //
+  // Every feed failing is a different animal: that is not four bad URLs, it is
+  // the credentials, the network, or Supabase. Nothing in the app can tell the
+  // family that, so the run goes red and the mail is worth sending.
+  if (failures >= attempted) {
+    console.log('::error::every feed failed — check the service role key, the network, and Supabase')
+    process.exitCode = 1
+    return
+  }
+  // Visible on the run summary without marking it failed.
+  console.log('::warning::some feeds failed; see Settings → Integrations in the app for the reason')
 }
 
 const stamp = () =>
