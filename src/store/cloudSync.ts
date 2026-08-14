@@ -295,7 +295,8 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
   data.settings.feeds.forEach((f, i) => {
     rows.feeds.push({
       id: f.id, household_id: hh, name: f.name, url: f.url, op_ref: f.opRef ?? null,
-      color: f.color, status: f.status, member_ids: f.memberIds ?? [], sort_order: i,
+      color: f.color, status: f.status, member_ids: f.memberIds ?? [], personal: !!f.personal,
+      sort_order: i,
     })
   })
 
@@ -519,6 +520,10 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     color: str(r.color, '#5B8DEF'),
     status: str(r.status),
     memberIds: (r.member_ids as string[]) ?? [],
+    // Present only when set, like opRef above: an optional field that always
+    // materialised as `false` would make every feed read back as a different
+    // object to the one written, which the round-trip suite is right to reject.
+    ...(r.personal === true ? { personal: true } : {}),
   }))
 
   const secrets: SecretRef[] = [...rows.secrets].sort(bySort).map((r) => ({

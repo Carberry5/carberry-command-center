@@ -39,7 +39,9 @@ export function MemberPage() {
   const theme = kidTheme(member)
   const bal = balances(data)[member.id] ?? 0
 
-  const agenda = eventsOn(data, td, null).filter((e) => !e.memberIds?.length || e.memberIds.includes(member.id))
+  // Filtered inside eventsOn rather than after it: the same rule, and it is
+  // what marks this as their view so a personal feed of theirs is included.
+  const agenda = eventsOn(data, td, [member.id])
   const upcoming = upcomingFor(data, member.id, { from: td, days: 45, limit: 6 })
   const chores = choresFor(data, member.id, dow)
   const greenlight = isKid ? data.gl[member.id] : undefined

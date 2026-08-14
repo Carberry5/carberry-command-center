@@ -83,8 +83,14 @@ interface ModalValue {
   setIntegration: (v: IntegrationDraft | null | ((prev: IntegrationDraft) => IntegrationDraft)) => void
 
   /** Date whose events are shown in the month-view day sheet. */
-  dayDetail: string | null
-  setDayDetail: (v: string | null) => void
+  /**
+   * The day whose plan is open, plus the calendar filter it was opened from.
+   * Carrying the filter keeps the modal honest: open a day while the calendar
+   * is narrowed to one person and you get that person's day, personal feeds
+   * and all, rather than a different set of events to the cell you tapped.
+   */
+  dayDetail: { ds: string; filter: string[] | null } | null
+  setDayDetail: (v: { ds: string; filter: string[] | null } | null) => void
 
   voice: VoiceState | null
   setVoice: (v: VoiceState | null | ((prev: VoiceState) => VoiceState)) => void
@@ -113,7 +119,7 @@ export function ModalStoreProvider({ children }: { children: ReactNode }) {
   const [planNight, setPlanNight] = useState<string | null>(null)
   const [countdown, setCountdownRaw] = useState<CountdownDraft | null>(null)
   const [integration, setIntegrationRaw] = useState<IntegrationDraft | null>(null)
-  const [dayDetail, setDayDetail] = useState<string | null>(null)
+  const [dayDetail, setDayDetail] = useState<{ ds: string; filter: string[] | null } | null>(null)
   const [voice, setVoiceRaw] = useState<VoiceState | null>(null)
 
   const newEvent = useCallback((date?: string) => {

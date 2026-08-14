@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import type { FamilyData, Member, ResolvedEvent } from '../types.ts'
+import type { FamilyData, Feed, Member, ResolvedEvent } from '../types.ts'
 import { addDays, dowOf, today } from './dates.ts'
 import { FAM } from './theme.ts'
 
@@ -22,8 +22,31 @@ export function balances(d: FamilyData): Record<string, number> {
 }
 
 /**
+ * Whether a feed's events belong in a view showing `filter`.
+ *
+ * Ordinary feeds are always in. A personal feed is in only when the view has
+ * been narrowed to somebody it belongs to — that is what makes it personal: it
+ * is on Hadley's page and on the calendar once you pick Hadley out, and absent
+ * from the family week the rest of the time.
+ *
+ * The `memberIds.length` guard is not defensive padding. A personal feed tagged
+ * to nobody can never satisfy the second clause, so without it the feed would
+ * be invisible in every view and its events would simply vanish — a checkbox
+ * that silently deletes a calendar.
+ */
+function feedVisible(f: Feed, filter: string[] | null): boolean {
+  if (!f.personal || !f.memberIds?.length) return true
+  return !!filter && f.memberIds.some((id) => filter.includes(id))
+}
+
+/**
  * Every event landing on `ds`, own and from feeds, weekly repeats expanded,
  * sorted by start time and filtered to the selected members.
+ *
+ * `filter` is doing two jobs: it picks which members' events survive, and it
+ * tells personal feeds whether this is a view they belong in. Pass `[memberId]`
+ * rather than null when building one person's view, or their personal feeds
+ * will be dropped along with everyone else's.
  */
 export function eventsOn(d: FamilyData, ds: string, filter: string[] | null): ResolvedEvent[] {
   const dw = dowOf(ds)
@@ -34,11 +57,12 @@ export function eventsOn(d: FamilyData, ds: string, filter: string[] | null): Re
   d.events.forEach((e) => {
     if (hits(e.date, e.recur)) out.push({ ...e, date: ds, feedColor: null, readOnly: false })
   })
-  ;(d.settings.feeds ?? []).forEach((f) =>
-    (d.feedEv?.[f.id] ?? []).forEach((e) => {
+  ;(d.settings.feeds ?? []).forEach((f) => {
+    if (!feedVisible(f, filter)) return
+    ;(d.feedEv?.[f.id] ?? []).forEach((e) => {
       if (hits(e.date, e.recur)) out.push({ ...e, date: ds, feedColor: f.color, readOnly: true })
     })
-  )
+  })
 
   out.sort((a, b) => ((a.start ?? '99') < (b.start ?? '99') ? -1 : 1))
   return filter
@@ -69,11 +93,12 @@ export function upcomingFor(
 
   for (let i = 1; i <= days && out.length < limit; i++) {
     const day = addDays(from, i)
-    for (const e of eventsOn(d, day, null)) {
+    // Filtering here rather than after the call: eventsOn applies exactly this
+    // rule to events (keep the untagged, keep this member's, drop the rest),
+    // and it is also what tells a personal feed that this is Hadley's view and
+    // her launches belong in it.
+    for (const e of eventsOn(d, day, [memberId])) {
       if (out.length >= limit) break
-      // An event tagged to nobody belongs to the whole family, which is how a
-      // launch feed with no member chips still lands on everyone's page.
-      if (e.memberIds?.length && !e.memberIds.includes(memberId)) continue
       out.push(e)
     }
   }

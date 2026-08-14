@@ -295,6 +295,10 @@ create table if not exists public.feeds (
   status       text not null default 'Not synced yet',
   -- Members this feed's events belong to; empty means the whole family.
   member_ids   text[] not null default '{}',
+  -- Keep this feed off the shared calendar: it shows on its members' pages and
+  -- on the calendar only when filtered to one of them. For a personal interest
+  -- (a launch schedule) as opposed to a shared obligation (a school calendar).
+  personal     boolean not null default false,
   sort_order   integer not null default 0
 );
 
@@ -579,6 +583,7 @@ alter table public.feeds add column if not exists op_ref text;
 alter table public.feeds add column if not exists color text default '#5B8DEF'::text;
 alter table public.feeds add column if not exists status text default 'Not synced yet'::text;
 alter table public.feeds add column if not exists member_ids text[] default '{}'::text[];
+alter table public.feeds add column if not exists personal boolean default false;
 alter table public.feeds add column if not exists sort_order integer default 0;
 
 -- fit_stats

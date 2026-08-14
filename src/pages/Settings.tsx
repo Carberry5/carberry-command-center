@@ -882,6 +882,41 @@ function FeedsCard() {
                   </button>
                 )
               })}
+
+              {/* Only offered once the feed belongs to somebody: "personal" with
+                  nobody to be personal to would hide the feed from every view,
+                  so the flag is ignored in that case and the control would be a
+                  switch that does nothing. */}
+              {f.memberIds?.length ? (
+                <button
+                  type="button"
+                  aria-pressed={!!f.personal}
+                  title={
+                    f.personal
+                      ? 'Shows on their pages only — tap to put it back on the family calendar'
+                      : 'Shows on the family calendar — tap to keep it to their pages'
+                  }
+                  onClick={() =>
+                    update((d) => {
+                      const feed = d.settings.feeds.find((x) => x.id === f.id)
+                      if (feed) feed.personal = !feed.personal
+                    })
+                  }
+                  style={{
+                    marginLeft: 4,
+                    borderRadius: 999,
+                    padding: '3px 10px',
+                    fontWeight: 700,
+                    fontSize: '.68em',
+                    cursor: 'pointer',
+                    background: f.personal ? INK : 'transparent',
+                    color: f.personal ? CREAM : line(0.5),
+                    border: f.personal ? 'none' : `1.5px solid ${line(0.2)}`,
+                  }}
+                >
+                  {f.personal ? 'Their pages only' : 'On family calendar'}
+                </button>
+              ) : null}
             </div>
           </div>
           <span style={{ fontWeight: 600, fontSize: '.78em', color: line(0.55) }}>{f.status}</span>
