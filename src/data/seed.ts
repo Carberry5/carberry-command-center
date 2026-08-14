@@ -212,6 +212,9 @@ export function seed(): FamilyData {
       ],
     },
     feedEv: {},
+    // No games until the family adds the ones they'll actually watch; the
+    // season is the only thing worth pre-filling.
+    pickem: { season: 2026, games: [], picks: [] },
     preflight: seedPreflight(members),
     windDown: {
       open: true,

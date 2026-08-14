@@ -43,6 +43,15 @@ export function migrate(input: Partial<FamilyData> | null | undefined): FamilyDa
 
   d.done = input.done ?? {}
   d.feedEv = input.feedEv ?? {}
+  // Data written before the pick'em existed gets an empty season rather than a
+  // missing key, so every read below can assume the shape is there.
+  d.pickem = input.pickem
+    ? {
+        season: input.pickem.season ?? base.pickem.season,
+        games: input.pickem.games ?? [],
+        picks: input.pickem.picks ?? [],
+      }
+    : base.pickem
   d.mealPlan = input.mealPlan ?? {}
   d.redemptions = input.redemptions ?? []
   d.secrets = input.secrets ?? []

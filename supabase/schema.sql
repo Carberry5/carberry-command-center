@@ -39,6 +39,10 @@ create table if not exists public.households (
   winddown_open     boolean not null default true,
   winddown_bedtime  text not null default '20:30',
   winddown_screens  text not null default '20:00',
+  -- The pick'em season being played, as its starting year. Lives here rather
+  -- than being derived from the games so a new season can be opened before any
+  -- games have been added to it.
+  pickem_season     integer not null default 2026,
   created_at        timestamptz not null default now(),
   updated_at        timestamptz not null default now()
 );
@@ -280,6 +284,45 @@ create table if not exists public.countdowns (
 );
 
 create index if not exists countdowns_household_idx on public.countdowns(household_id);
+
+-- ---------------------------------------------------------------------------
+-- Pick'em: the slate the family picks each week, and everyone's picks
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.pickem_games (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  -- The season's starting year: 2026 means the 2026/27 season.
+  season       integer not null default 2026,
+  week         integer not null default 1,
+  -- Team codes, e.g. 'WAS'. Not a foreign key: the league is application data,
+  -- not something the family edits, and a franchise moving city should not be a
+  -- migration.
+  away         text not null default '',
+  home         text not null default '',
+  date         date not null,
+  start_time   text,
+  -- The winning team's code, once a parent records it. Null until then; the
+  -- scoring also ignores a winner that is neither of the two teams playing.
+  winner       text,
+  sort_order   integer not null default 0
+);
+
+create index if not exists pickem_games_household_idx on public.pickem_games(household_id);
+
+create table if not exists public.pickem_picks (
+  id           text primary key,
+  household_id text not null references public.households(id) on delete cascade,
+  game_id      text not null references public.pickem_games(id) on delete cascade,
+  member_id    text not null,
+  team         text not null default '',
+  sort_order   integer not null default 0
+);
+
+create index if not exists pickem_picks_household_idx on public.pickem_picks(household_id);
+-- One pick per person per game. The app enforces it too, but a duplicate here
+-- would put two different answers on the same leaderboard.
+create unique index if not exists pickem_picks_one_per_member on public.pickem_picks(game_id, member_id);
 
 -- ---------------------------------------------------------------------------
 -- Settings: ICS feeds and 1Password-style secret references
@@ -632,6 +675,7 @@ alter table public.households add column if not exists preflight_depart text def
 alter table public.households add column if not exists winddown_open boolean default true;
 alter table public.households add column if not exists winddown_bedtime text default '20:30'::text;
 alter table public.households add column if not exists winddown_screens text default '20:00'::text;
+alter table public.households add column if not exists pickem_season integer default 2026;
 alter table public.households add column if not exists created_at timestamp with time zone default now();
 alter table public.households add column if not exists updated_at timestamp with time zone default now();
 
@@ -1278,7 +1322,8 @@ declare
     'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists', 'list_items',
     'countdowns', 'feeds', 'secrets', 'preflight_kids', 'preflight_bring', 'winddown_steps',
     'fit_stats', 'greenlight', 'greenlight_payouts',
-    'staples', 'deals', 'savings_status', 'savings_plan'
+    'staples', 'deals', 'savings_status', 'savings_plan',
+    'pickem_games', 'pickem_picks'
   ];
 begin
   foreach t in array scoped loop
@@ -1356,7 +1401,8 @@ declare
     'chore_log', 'rewards', 'redemptions', 'favorites', 'meal_plan', 'lists',
     'list_items', 'countdowns', 'feeds', 'feed_events', 'secrets', 'preflight_kids',
     'preflight_bring', 'winddown_steps', 'fit_stats', 'greenlight', 'greenlight_payouts',
-    'staples', 'deals', 'savings_status', 'savings_plan'
+    'staples', 'deals', 'savings_status', 'savings_plan',
+    'pickem_games', 'pickem_picks'
   ];
 begin
   -- The `realtime` schema is the reliable "am I on Supabase?" tell; a plain

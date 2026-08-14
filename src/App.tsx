@@ -22,6 +22,7 @@ import { MealsPage } from './pages/Meals.tsx'
 import { SavingsPage } from './pages/Savings.tsx'
 import { ListsPage } from './pages/Lists.tsx'
 import { CountdownsPage } from './pages/Countdowns.tsx'
+import { PickemPage } from './pages/Pickem.tsx'
 import { SidekickPage } from './pages/Sidekick.tsx'
 import { SettingsPage } from './pages/Settings.tsx'
 import { DisplayPage } from './pages/Display.tsx'
@@ -35,6 +36,7 @@ const PAGES = {
   savings: SavingsPage,
   lists: ListsPage,
   countdowns: CountdownsPage,
+  pickem: PickemPage,
   sidekick: SidekickPage,
   settings: SettingsPage,
 } as const

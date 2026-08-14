@@ -47,6 +47,21 @@ async function main() {
 
   const data: FamilyData = migrate(seed())
 
+  // The seed ships an empty pick'em — the family adds the games they'll watch.
+  // Empty tables prove nothing here: this suite exists to show that every
+  // column named in cloudSync.ts actually exists with a compatible type, and a
+  // table with no rows inserted is a column list nobody checked. So the fixture
+  // gets a settled game, an unplayed one, and picks on both.
+  data.pickem.games.push(
+    { id: 'pg-1', season: 2026, week: 1, away: 'DAL', home: 'PHI', date: '2026-09-10', start: '20:15', winner: 'PHI' },
+    { id: 'pg-2', season: 2026, week: 1, away: 'KC', home: 'BUF', date: '2026-09-13', start: null, winner: null }
+  )
+  const someone = data.members[0]?.id ?? 'm1'
+  data.pickem.picks.push(
+    { gameId: 'pg-1', memberId: someone, team: 'PHI' },
+    { gameId: 'pg-2', memberId: someone, team: 'KC' }
+  )
+
   // --- insert a full snapshot ------------------------------------------------
 
   console.log('\ninsert a full snapshot')
