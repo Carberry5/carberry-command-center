@@ -3,6 +3,8 @@
  * the sidecar serialises exactly this shape to markdown and back.
  */
 
+import type { PickemGame, PickemPick } from './lib/pickem.ts'
+
 export type Role = 'parent' | 'kid'
 
 /** A shortcut on a member's page — school portal, team site, reading log. */
@@ -125,6 +127,21 @@ export interface Feed {
    * and not on their siblings'.
    */
   memberIds: string[]
+  /**
+   * Keep these events off the shared calendar.
+   *
+   * Tagging a feed to a member says whose it is; this says who it is *for*. A
+   * school calendar is tagged to a kid and still belongs on the family week —
+   * everyone needs to see an early dismissal. A launch schedule is Hadley's
+   * interest, and twelve rockets a fortnight bury the things the household is
+   * actually coordinating around.
+   *
+   * So a personal feed shows on its members' pages, and on the calendar only
+   * when the calendar has been filtered to one of them. Meaningless without
+   * memberIds — a personal feed tagged to nobody would be visible nowhere, so
+   * the flag is ignored in that case.
+   */
+  personal?: boolean
 }
 
 export interface Settings {
@@ -283,7 +300,22 @@ export interface FamilyData {
   secrets: SecretRef[]
   /** The grocery savings module: staples, current deals, and the weekly plan. */
   savings: Savings
+  /** The family NFL pick'em: the slate each week, and everyone's picks. */
+  pickem: Pickem
 }
+
+export interface Pickem {
+  /** The season being played, as its starting year — 2026 for 2026/27. */
+  season: number
+  games: PickemGame[]
+  picks: PickemPick[]
+}
+
+/**
+ * Defined in lib/pickem.ts next to the scoring that gives them meaning, and
+ * re-exported here so FamilyData reads as one document.
+ */
+export type { PickemGame, PickemPick }
 
 export type PageId =
   | 'today'
@@ -294,6 +326,7 @@ export type PageId =
   | 'savings'
   | 'lists'
   | 'countdowns'
+  | 'pickem'
   | 'sidekick'
   | 'settings'
 

@@ -10,6 +10,7 @@ import type {
   FitStats,
   Greenlight,
   Member,
+  Pickem,
   Preflight,
   Reward,
   Savings,
@@ -75,6 +76,8 @@ export interface TableRows {
   deals: Row[]
   savings_status: Row[]
   savings_plan: Row[]
+  pickem_games: Row[]
+  pickem_picks: Row[]
 }
 
 export type TableName = keyof TableRows
@@ -114,6 +117,8 @@ export const PRIMARY_KEYS: Record<TableName, string[]> = {
   deals: ['id'],
   savings_status: ['household_id', 'store'],
   savings_plan: ['household_id'],
+  pickem_games: ['id'],
+  pickem_picks: ['id'],
 }
 
 /**
@@ -148,6 +153,8 @@ export const WRITE_ORDER: TableName[] = [
   'deals',
   'savings_status',
   'savings_plan',
+  'pickem_games',
+  'pickem_picks',
 ]
 
 function emptyRows(): TableRows {
@@ -158,6 +165,7 @@ function emptyRows(): TableRows {
     secrets: [], preflight_kids: [], preflight_bring: [], winddown_steps: [], fit_stats: [],
     greenlight: [], greenlight_payouts: [],
     staples: [], deals: [], savings_status: [], savings_plan: [],
+    pickem_games: [], pickem_picks: [],
   }
 }
 
@@ -181,6 +189,7 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
     winddown_open: data.windDown?.open ?? true,
     winddown_bedtime: data.windDown?.bedtime ?? '20:30',
     winddown_screens: data.windDown?.screensOff ?? '20:00',
+    pickem_season: data.pickem?.season ?? 2026,
   })
 
   ;(data.windDown?.steps ?? []).forEach((st, i) => {
@@ -295,7 +304,8 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
   data.settings.feeds.forEach((f, i) => {
     rows.feeds.push({
       id: f.id, household_id: hh, name: f.name, url: f.url, op_ref: f.opRef ?? null,
-      color: f.color, status: f.status, member_ids: f.memberIds ?? [], sort_order: i,
+      color: f.color, status: f.status, member_ids: f.memberIds ?? [], personal: !!f.personal,
+      sort_order: i,
     })
   })
 
@@ -375,6 +385,35 @@ export function toRows(data: FamilyData, householdId: string): TableRows {
       generated_at: data.savings.plan.generatedAt,
     })
   }
+
+  data.pickem.games.forEach((g, i) => {
+    rows.pickem_games.push({
+      id: g.id,
+      household_id: hh,
+      season: g.season,
+      week: g.week,
+      away: g.away,
+      home: g.home,
+      date: g.date,
+      start_time: g.start,
+      winner: g.winner,
+      sort_order: i,
+    })
+  })
+
+  data.pickem.picks.forEach((p, i) => {
+    rows.pickem_picks.push({
+      // Derived rather than random: one pick per person per game is the rule,
+      // so the key that enforces it is also the natural id. A second pick for
+      // the same pair then updates the first instead of racing it.
+      id: `${p.gameId}|${p.memberId}`,
+      household_id: hh,
+      game_id: p.gameId,
+      member_id: p.memberId,
+      team: p.team,
+      sort_order: i,
+    })
+  })
 
   return rows
 }
@@ -519,6 +558,10 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     color: str(r.color, '#5B8DEF'),
     status: str(r.status),
     memberIds: (r.member_ids as string[]) ?? [],
+    // Present only when set, like opRef above: an optional field that always
+    // materialised as `false` would make every feed read back as a different
+    // object to the one written, which the round-trip suite is right to reject.
+    ...(r.personal === true ? { personal: true } : {}),
   }))
 
   const secrets: SecretRef[] = [...rows.secrets].sort(bySort).map((r) => ({
@@ -648,6 +691,25 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
       : null,
   }
 
+  const pickem: Pickem = {
+    season: num(hh.pickem_season, 2026) || 2026,
+    games: [...rows.pickem_games].sort(bySort).map((r) => ({
+      id: str(r.id),
+      season: num(r.season, 2026),
+      week: num(r.week, 1),
+      away: str(r.away),
+      home: str(r.home),
+      date: day(r.date),
+      start: r.start_time == null ? null : str(r.start_time),
+      winner: r.winner == null || r.winner === '' ? null : str(r.winner),
+    })),
+    picks: [...rows.pickem_picks].sort(bySort).map((r) => ({
+      gameId: str(r.game_id),
+      memberId: str(r.member_id),
+      team: str(r.team),
+    })),
+  }
+
   return {
     members,
     events,
@@ -674,6 +736,7 @@ export function fromRows(rows: TableRows, base: FamilyData, feedEvents: Row[] = 
     gl,
     secrets,
     savings,
+    pickem,
   }
 }
 

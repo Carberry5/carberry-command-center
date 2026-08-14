@@ -14,6 +14,7 @@ const PAGES: [PageId, string][] = [
   ['savings', 'Grocery'],
   ['lists', 'Lists'],
   ['countdowns', 'Countdowns'],
+  ['pickem', "Pick'em"],
   ['sidekick', 'Sidekick'],
   ['settings', 'Settings'],
 ]

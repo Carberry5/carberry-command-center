@@ -726,18 +726,18 @@ export function DayDetailModal() {
   if (!dayDetail) return null
 
   const close = () => setDayDetail(null)
-  const events = eventsOn(data, dayDetail, null)
+  const events = eventsOn(data, dayDetail.ds, dayDetail.filter)
 
   return (
     <Modal onClose={close} width={460}>
       <div style={{ display: 'flex', alignItems: 'center', marginBottom: 12 }}>
         <h2 style={{ ...HEADING, fontSize: '1.25em' }}>
-          {parseDay(dayDetail).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+          {parseDay(dayDetail.ds).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
         </h2>
         <div style={{ flex: 1 }} />
         <button
           onClick={() => {
-            newEvent(dayDetail)
+            newEvent(dayDetail.ds)
             close()
           }}
           style={{

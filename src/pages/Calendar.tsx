@@ -350,7 +350,7 @@ export function CalendarPage() {
               return (
                 <div
                   key={ds}
-                  onClick={() => setDayDetail(ds)}
+                  onClick={() => setDayDetail({ ds, filter })}
                   style={{
                     minHeight: 92,
                     borderRadius: 14,

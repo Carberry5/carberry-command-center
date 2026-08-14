@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "Family Council / Carberry Command Center — family dashboard for iPad, TV and desktop, mirrored to an Obsidian vault with secrets in 1Password.",
+  "description": "Family Council / Carberry Command Center \u2014 family dashboard for iPad, TV and desktop, mirrored to an Obsidian vault with secrets in 1Password.",
   "scripts": {
     "dev": "concurrently -n sidecar,web -c magenta,cyan \"npm:dev:sidecar\" \"npm:dev:web\"",
     "dev:web": "vite",
@@ -19,7 +19,9 @@
     "test:winddown": "tsx scripts/winddown-test.ts",
     "test:launches": "tsx scripts/launches-test.ts",
     "test:upcoming": "tsx scripts/upcoming-test.ts",
-    "test:photo": "tsx scripts/photo-test.ts"
+    "test:photo": "tsx scripts/photo-test.ts",
+    "test:personalfeed": "tsx scripts/personalfeed-test.ts",
+    "test:pickem": "tsx scripts/pickem-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",

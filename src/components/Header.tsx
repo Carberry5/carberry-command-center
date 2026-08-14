@@ -19,6 +19,7 @@ const TITLES: Record<string, string> = {
   savings: 'Grocery',
   lists: 'Lists',
   countdowns: 'Countdowns',
+  pickem: "NFL Pick'em",
   sidekick: 'Sidekick',
   settings: 'Settings',
 }

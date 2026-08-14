@@ -100,6 +100,8 @@ export const NAV_ICONS: Record<string, string> = {
   savings: 'M20 12.5 12.8 19.7a2 2 0 0 1-2.8 0L4.3 14a2 2 0 0 1 0-2.8L11.5 4H17a3 3 0 0 1 3 3v5.5zM15.5 8.5h.02',
   lists: 'M9.5 6.5h11M9.5 12h11M9.5 17.5h11M4 6.5l1.2 1.2 2.2-2.4M4 12l1.2 1.2 2.2-2.4M4 17.5l1.2 1.2 2.2-2.4',
   countdowns: 'M7 3.5h10v3.5l-4 5 4 5v3.5H7v-3.5l4-5-4-5z',
+  // A football on its point, with the lacing across it.
+  pickem: 'M12 3.2c3.4 3 5.4 5.6 5.4 8.8s-2 5.8-5.4 8.8c-3.4-3-5.4-5.6-5.4-8.8S8.6 6.2 12 3.2zM9.4 12h5.2M11 9.8v4.4M13 9.8v4.4',
   sidekick: PATHS.sparkle,
   settings:
     'M12 8.6a3.4 3.4 0 1 0 0 6.8 3.4 3.4 0 0 0 0-6.8M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7',

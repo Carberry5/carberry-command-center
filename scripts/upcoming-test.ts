@@ -40,6 +40,7 @@ const base = (): FamilyData => ({
   windDown: { open: true, bedtime: '20:30', screensOff: '20:00', steps: [] },
   fit: {}, gl: {}, secrets: [],
   savings: { staples: [], deals: [], status: {}, plan: null },
+  pickem: { season: 2026, games: [], picks: [] },
 })
 
 const ev = (id: string, date: string, title: string, memberIds: string[] = [], start = '12:00') => ({
