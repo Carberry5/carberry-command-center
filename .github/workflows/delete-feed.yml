@@ -1,0 +1,65 @@
+name: Delete a calendar feed
+
+# Removes one feed and the events it pulled in. Settings -> Integrations in the
+# app does the same thing and is the normal route; this is for when the app
+# isn't to hand, or when a feed has gone permanently bad and the sync job is the
+# only thing still talking about it.
+#
+# Deliberately manual-only, and dry_run defaults to true: the first press shows
+# you which feed matched and how many events would go with it. Press it again
+# with dry_run off to actually delete.
+#
+# Uses the same SUPABASE_SERVICE_ROLE_KEY secret as the feed sync.
+
+on:
+  workflow_dispatch:
+    inputs:
+      feed:
+        description: 'Feed name or id (exact name, or a substring that matches only one)'
+        required: true
+        type: string
+      dry_run:
+        description: 'Show what would be deleted without deleting it'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: feeds-write
+  cancel-in-progress: false
+
+jobs:
+  delete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The matcher decides which feed dies, so it is tested before it runs
+      # rather than after. It needs no network and takes under a second.
+      - name: Test the matcher
+        run: npx tsx scripts/feedmatch-test.ts
+
+      - name: Delete
+        env:
+          SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          FEED: ${{ inputs.feed }}
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "::error::VITE_SUPABASE_URL variable is not set."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set."
+            exit 1
+          fi
+          npx tsx scripts/delete-feed.ts ${{ inputs.dry_run && '--dry-run' || '' }}

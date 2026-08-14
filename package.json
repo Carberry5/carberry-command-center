@@ -19,7 +19,8 @@
     "test:winddown": "tsx scripts/winddown-test.ts",
     "test:launches": "tsx scripts/launches-test.ts",
     "test:upcoming": "tsx scripts/upcoming-test.ts",
-    "test:photo": "tsx scripts/photo-test.ts"
+    "test:photo": "tsx scripts/photo-test.ts",
+    "test:feedmatch": "tsx scripts/feedmatch-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
