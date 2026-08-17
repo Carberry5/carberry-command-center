@@ -21,7 +21,8 @@
     "test:upcoming": "tsx scripts/upcoming-test.ts",
     "test:photo": "tsx scripts/photo-test.ts",
     "test:personalfeed": "tsx scripts/personalfeed-test.ts",
-    "test:pickem": "tsx scripts/pickem-test.ts"
+    "test:pickem": "tsx scripts/pickem-test.ts",
+    "test:missingtable": "tsx scripts/missingtable-test.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.115.0",
