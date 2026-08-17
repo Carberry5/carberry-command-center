@@ -869,6 +869,27 @@ export function isConfigured(): boolean {
 // Reading
 // ---------------------------------------------------------------------------
 
+/**
+ * Does this PostgREST error mean "that table isn't there"?
+ *
+ * PGRST205 is the code for an unknown table. The message is matched as well
+ * because the code has not always been populated on every PostgREST version,
+ * and getting this wrong in the lenient direction is the expensive one — a
+ * genuine failure swallowed as "empty table" would look like the family's data
+ * vanishing.
+ */
+export function isMissingTable(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+  if (error.code === 'PGRST205') return true
+  const m = (error.message ?? '').toLowerCase()
+  if (m.includes('could not find the table')) return true
+  // Scoped to relations on purpose. A bare "does not exist" test also catches
+  // `column feeds.personal does not exist`, and a missing column is a schema
+  // skew on a table that is present and full of real rows — reporting it empty
+  // would throw that data away. Missing columns must keep failing loudly.
+  return /relation\s+"?[\w.]+"?\s+does not exist/.test(m)
+}
+
 /** The caller's household, or null when the session isn't linked to one. */
 export async function currentHouseholdId(): Promise<string | null> {
   const { data, error } = await supabase()
@@ -889,6 +910,7 @@ export async function loadSnapshot(householdId: string, base: FamilyData): Promi
   const sb = supabase()
   const rows = emptyRows()
 
+  const missing: string[] = []
   const results = await Promise.all(
     WRITE_ORDER.map(async (table) => {
       const query = sb.from(table).select('*')
@@ -896,10 +918,36 @@ export async function loadSnapshot(householdId: string, base: FamilyData): Promi
         table === 'households'
           ? await query.eq('id', householdId)
           : await query.eq('household_id', householdId)
-      if (error) throw new Error(`${table}: ${error.message}`)
+      if (error) {
+        // A table the database has not got yet reads as empty rather than
+        // taking the whole snapshot down with it.
+        //
+        // Deploying the app and migrating the database are two separate acts
+        // and cannot be simultaneous. When a release added two tables ahead of
+        // the migration, every device failed this read, fell back to
+        // localStorage, and quietly stopped syncing — each one accumulating its
+        // own divergent copy of the family's data. A feature that isn't there
+        // yet showing up empty is a far smaller problem than that.
+        //
+        // Deliberately narrow: only "the table does not exist". A permission
+        // error, a dropped connection or a malformed query still fails loudly,
+        // because those do not fix themselves by running a migration.
+        if (isMissingTable(error)) {
+          missing.push(table)
+          return [table, [] as Row[]] as const
+        }
+        throw new Error(`${table}: ${error.message}`)
+      }
       return [table, (data ?? []) as Row[]] as const
     })
   )
+
+  if (missing.length) {
+    console.warn(
+      `[cloudSync] ${missing.join(', ')} missing from the database — treating as empty. ` +
+        'Apply supabase/schema.sql to the project.'
+    )
+  }
 
   for (const [table, data] of results) rows[table] = data
 
